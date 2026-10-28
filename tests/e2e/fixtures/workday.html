@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Apply - Woodgrove Careers (fixture)</title>
+<style>body{font:14px system-ui;max-width:640px;margin:40px auto}[data-automation-id^=formField-]{margin:12px 0}label{display:block;margin-bottom:4px}input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea{width:100%;padding:6px}button[aria-haspopup]{width:100%;text-align:left;padding:6px}.date input{width:60px!important;display:inline-block}</style>
+<script src="widgets.js"></script>
+</head>
+<body>
+<div data-automation-id="applyFlowPage">
+  <h2>My Information</h2>
+  <div data-automation-id="formField-sourceDropdown"><label id="src-l">How Did You Hear About Us?<abbr>*</abbr></label>
+    <button type="button" aria-haspopup="listbox" aria-labelledby="src-l" data-automation-id="sourceDropdown">Select One</button></div>
+  <div data-automation-id="formField-candidateIsPreviousWorker"><fieldset><legend>Have you previously worked for Woodgrove?</legend>
+    <label><input type="radio" name="candidateIsPreviousWorker" value="true"> Yes</label>
+    <label><input type="radio" name="candidateIsPreviousWorker" value="false"> No</label></fieldset></div>
+  <div data-automation-id="formField-country"><label id="country-l">Country<abbr>*</abbr></label>
+    <button type="button" aria-haspopup="listbox" aria-labelledby="country-l" id="country--country">Select One</button></div>
+  <div data-automation-id="formField-legalName--firstName"><label for="name--legalName--firstName">First Name<abbr>*</abbr></label><input id="name--legalName--firstName" name="legalName--firstName"></div>
+  <div data-automation-id="formField-legalName--middleName"><label for="name--legalName--middleName">Middle Name</label><input id="name--legalName--middleName" name="legalName--middleName"></div>
+  <div data-automation-id="formField-legalName--lastName"><label for="name--legalName--lastName">Last Name<abbr>*</abbr></label><input id="name--legalName--lastName" name="legalName--lastName"></div>
+  <div data-automation-id="formField-addressLine1"><label for="address--addressLine1">Address Line 1</label><input id="address--addressLine1" name="addressLine1"></div>
+  <div data-automation-id="formField-city"><label for="address--city">City</label><input id="address--city" name="city"></div>
+  <div data-automation-id="formField-countryRegion"><label id="state-l">State</label>
+    <button type="button" aria-haspopup="listbox" aria-labelledby="state-l" id="address--countryRegion">Select One</button></div>
+  <div data-automation-id="formField-postalCode"><label for="address--postalCode">Postal Code</label><input id="address--postalCode" name="postalCode"></div>
+  <div data-automation-id="formField-email"><label for="emailAddress--emailAddress">Email Address</label><input id="emailAddress--emailAddress" name="emailAddress"></div>
+  <div data-automation-id="formField-phoneType"><label id="dev-l">Phone Device Type</label>
+    <button type="button" aria-haspopup="listbox" aria-labelledby="dev-l" id="phoneNumber--phoneType" data-automation-id="phone-device-type">Select One</button></div>
+  <div data-automation-id="formField-phoneNumber"><label for="phoneNumber--phoneNumber">Phone Number</label><input id="phoneNumber--phoneNumber" name="phoneNumber"></div>
+
+  <h2>My Experience</h2>
+  <div role="group" aria-labelledby="we-h"><h3 id="we-h">Work Experience</h3>
+    <div data-automation-id="workExperience-7">
+      <div data-automation-id="formField-jobTitle"><label for="workExperience-7--jobTitle">Job Title<abbr>*</abbr></label><input id="workExperience-7--jobTitle" name="jobTitle"></div>
+      <div data-automation-id="formField-companyName"><label for="workExperience-7--companyName">Company<abbr>*</abbr></label><input id="workExperience-7--companyName" name="companyName"></div>
+      <div data-automation-id="formField-currentlyWorkHere"><label><input type="checkbox" id="workExperience-7--currentlyWorkHere" name="currentlyWorkHere"> I currently work here</label></div>
+      <div data-automation-id="formField-startDate" class="date"><label>From<abbr>*</abbr></label>
+        <input id="workExperience-7--startDate-dateSectionMonth-input" data-automation-id="dateSectionMonth-input" aria-label="Month" role="spinbutton">
+        <input id="workExperience-7--startDate-dateSectionYear-input" data-automation-id="dateSectionYear-input" aria-label="Year" role="spinbutton"></div>
+      <div data-automation-id="formField-roleDescription"><label for="workExperience-7--roleDescription">Role Description</label><textarea id="workExperience-7--roleDescription" name="roleDescription"></textarea></div>
+    </div>
+    <button type="button" data-automation-id="add-button" aria-label="Add Work Experience">Add Another</button>
+  </div>
+  <div role="group" aria-labelledby="ed-h"><h3 id="ed-h">Education</h3>
+    <div data-automation-id="education-3">
+      <div data-automation-id="formField-schoolName"><label for="education-3--schoolName">School or University</label><input id="education-3--schoolName" name="schoolName"></div>
+      <div data-automation-id="formField-degree"><label id="deg-l">Degree</label>
+        <button type="button" aria-haspopup="listbox" aria-labelledby="deg-l" id="education-3--degree">Select One</button></div>
+    </div>
+  </div>
+  <div data-automation-id="formField-resume"><label>Resume/CV</label>
+    <input type="file" data-automation-id="file-upload-input-ref" style="display:none"><button type="button" data-automation-id="select-files">Select files</button></div>
+  <div data-automation-id="formField-linkedinQuestion"><label for="linkedin">LinkedIn</label><input id="linkedin" data-automation-id="linkedinQuestion"></div>
+
+  <button data-automation-id="bottom-navigation-next-button" onclick="window.__submitted = true">Save and Continue</button>
+</div>
+<script>
+  fakeListboxButton(document.querySelector('[data-automation-id=sourceDropdown]'), ['Job Board', 'LinkedIn', 'Referral']);
+  fakeListboxButton(document.getElementById('country--country'), ['Canada', 'United States of America']);
+  fakeListboxButton(document.getElementById('address--countryRegion'), ['New Jersey', 'New York']);
+  fakeListboxButton(document.getElementById('phoneNumber--phoneType'), ['Mobile', 'Home']);
+  fakeListboxButton(document.getElementById('education-3--degree'), ['High School', 'Bachelors', 'Masters']);
+  const $ = (s) => document.querySelector(s);
+  window.__expect = () => ({
+    'source via answer bank': $('[data-automation-id=sourceDropdown]').textContent === 'LinkedIn',
+    'country': $('#country--country').textContent === 'United States of America',
+    'first name': $('#name--legalName--firstName').value === 'Alex',
+    'middle name skipped': $('#name--legalName--middleName').value === '',
+    'last name': $('#name--legalName--lastName').value === 'Rivera',
+    'city': $('#address--city').value === 'Brooklyn',
+    'state NY -> New York': $('#address--countryRegion').textContent === 'New York',
+    'phone device type untouched': $('#phoneNumber--phoneType').textContent === 'Select One',
+    'phone': $('#phoneNumber--phoneNumber').value === '(555) 123-4567',
+    'job title': $('#workExperience-7--jobTitle').value === 'Senior Product Designer',
+    'company': $('#workExperience-7--companyName').value === 'Northwind Labs',
+    'currently work here': $('#workExperience-7--currentlyWorkHere').checked,
+    'start month': $('#workExperience-7--startDate-dateSectionMonth-input').value === '01',
+    'start year': $('#workExperience-7--startDate-dateSectionYear-input').value === '2021',
+    'school': $('#education-3--schoolName').value === 'Rhode Island School of Design',
+    'degree': $('#education-3--degree').textContent === 'Bachelors',
+    'resume attached': $('[data-automation-id=file-upload-input-ref]').files.length === 1,
+    'linkedin': $('#linkedin').value.includes('linkedin'),
+  });
+</script>
+</body>
+</html>

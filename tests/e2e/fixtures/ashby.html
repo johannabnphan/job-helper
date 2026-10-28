@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Product Designer @ Fabrikam (fixture)</title>
+<style>body{font:14px system-ui;max-width:640px;margin:40px auto}.ashby-application-form-field-entry{margin:14px 0}label{display:block;margin-bottom:4px}input:not([type=file]),textarea{width:100%;padding:6px}._active_{background:#2563eb;color:#fff}.select__control{border:1px solid #999;padding:2px 6px}</style>
+<script src="widgets.js"></script>
+</head>
+<body>
+<div class="ashby-application-form-container">
+<form onsubmit="window.__submitted = true; return false;">
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_name">Name</label><input id="_systemfield_name" name="_systemfield_name" type="text"></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_email">Email</label><input id="_systemfield_email" name="_systemfield_email" type="email"></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_resume">Resume</label>
+    <div><button type="button">Upload File</button><input id="_systemfield_resume" type="file" style="display:none"></div></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="_systemfield_location">Location</label>
+    <div class="select__control"><div class="select__single-value"></div><input id="_systemfield_location" role="combobox" aria-autocomplete="list"></div></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="b0a1">Phone number</label><input id="b0a1" type="tel"></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="b0a2">LinkedIn</label><input id="b0a2" type="text"></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="b0a3">Portfolio</label><input id="b0a3" type="text"></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title">Will you now or in the future require visa sponsorship?<span class="_required_">*</span></label>
+    <div class="_yesno_"><button type="button" class="_option_">Yes</button><button type="button" class="_option_">No</button></div></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title">Are you willing to work from our NYC office 3 days a week?</label>
+    <div class="_yesno_"><button type="button" class="_option_">Yes</button><button type="button" class="_option_">No</button></div></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="b0a4">What is your expected salary range?</label><input id="b0a4" type="text"></div>
+  <div class="ashby-application-form-field-entry"><label class="ashby-application-form-question-title" for="b0a5">Tell us about a project you're proud of.</label><textarea id="b0a5"></textarea></div>
+  <button type="submit" class="ashby-application-form-submit-button">Submit Application</button>
+</form>
+</div>
+<script>
+  document.querySelectorAll('._yesno_').forEach(fakeYesNo);
+  fakeReactSelect(document.getElementById('_systemfield_location'), ['Brooklyn, NY, United States', 'Brooklyn Park, MN, United States']);
+  const $ = (s) => document.querySelector(s);
+  const yesno = (i) => [...document.querySelectorAll('._yesno_')[i].querySelectorAll('button')].find((b) => b.classList.contains('_active_'))?.textContent;
+  window.__expect = () => ({
+    'name': $('#_systemfield_name').value === 'Alex Rivera',
+    'email': $('#_systemfield_email').value === 'alex.rivera@example.com',
+    'resume attached': $('#_systemfield_resume').files.length === 1,
+    'location picked': $('#_systemfield_location').closest('.select__control').querySelector('.select__single-value').textContent === 'Brooklyn, NY, United States',
+    'phone': $('#b0a1').value === '(555) 123-4567',
+    'linkedin': $('#b0a2').value.includes('linkedin'),
+    'portfolio': $('#b0a3').value === 'https://alexrivera.dev',
+    'sponsorship Yes/No buttons = No': yesno(0) === 'No',
+    'unknown Yes/No left for user': yesno(1) === undefined,
+    'salary': $('#b0a4').value.startsWith('$140,000'),
+    'open-ended left empty': $('#b0a5').value === '',
+  });
+</script>
+</body>
+</html>
