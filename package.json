@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "icons": "python3 scripts/make_icons.py",
-    "test:e2e": "node tests/e2e/run.mjs"
+    "test:e2e": "node tests/e2e/run.mjs",
+    "dev:content": "vite build --watch --config vite.content.config.ts"
   },
   "devDependencies": {
     "@types/chrome": "^0.3.7",

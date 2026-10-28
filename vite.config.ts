@@ -8,7 +8,8 @@ export default defineConfig({
   base: './',
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
+    // Keep content.js (built by the other config) when rebuilding in watch mode.
+    emptyOutDir: !process.argv.includes('--watch'),
     target: 'chrome120',
     modulePreload: { polyfill: false },
     rollupOptions: {
