@@ -36,8 +36,8 @@ async function pdfToText(data: ArrayBuffer): Promise<string> {
   return pages.join('\n');
 }
 
-export async function resumeToText(file: Blob & { name?: string }): Promise<string> {
-  const name = (file.name ?? '').toLowerCase();
+export async function resumeToText(file: Blob, fileName: string): Promise<string> {
+  const name = fileName.toLowerCase();
   if (file.type === 'application/pdf' || name.endsWith('.pdf')) return pdfToText(await file.arrayBuffer());
   if (file.type.startsWith('text/') || /\.(txt|md)$/.test(name)) return file.text();
   throw new Error('Import supports PDF and plain-text resumes. You can still upload other formats for autofill.');
