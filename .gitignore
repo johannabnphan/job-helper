@@ -1,0 +1,42 @@
+# Dependencies and build output
+node_modules/
+dist/
+*.zip
+*.crx
+*.pem
+
+# Secrets: never commit API keys or env files
+.env
+.env.*
+!.env.example
+*.key
+secrets.json
+**/api-key*
+**/apikey*
+
+# Personal data: resumes, exported profiles, cover letters
+# (source files like src/**/resume-*.ts are allowed; documents are not)
+*.pdf
+*.doc
+*.docx
+*.rtf
+*.odt
+*.pages
+*resume*.txt
+*Resume*.txt
+*resume*.md
+*Resume*.md
+*CV*.txt
+resumes/
+profile-export*.json
+job-helper-backup*.json
+personal/
+private/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+coverage/

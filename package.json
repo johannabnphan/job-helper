@@ -1,0 +1,25 @@
+{
+  "name": "job-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that autofills job applications from your local profile. You review and submit.",
+  "type": "module",
+  "scripts": {
+    "build": "vite build && vite build --config vite.content.config.ts",
+    "dev": "vite build --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "icons": "python3 scripts/make_icons.py"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/node": "^26.6.6",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.4.299"
+  }
+}
