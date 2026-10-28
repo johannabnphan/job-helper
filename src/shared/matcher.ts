@@ -575,7 +575,7 @@ export function resolveField(field: FieldDescriptor, ctx: ResolveContext): Resol
 
   if (key && !openEnded) {
     const value = profileValue(key, ctx.profile, ctx.index ?? 0, field.kind);
-    if (value !== undefined) return { value, key, confidence: 'high', source: `Profile: ${key}` };
+    if (value !== undefined) return { value, key, confidence: 'high', source: `From profile: ${humanize(key)}` };
   }
 
   const answer = matchAnswer(field.label, ctx.answers);
@@ -583,7 +583,7 @@ export function resolveField(field: FieldDescriptor, ctx: ResolveContext): Resol
     return {
       value: answer.answer.trim(),
       confidence: openEnded ? 'review' : 'high',
-      source: `Answer: ${answer.question || answer.keywords[0]}`,
+      source: `From answer bank: ${answer.question || answer.keywords[0]}`,
       reason: openEnded ? 'Open-ended question filled from your answer bank. Tailor it to this role.' : undefined,
     };
   }
@@ -591,11 +591,11 @@ export function resolveField(field: FieldDescriptor, ctx: ResolveContext): Resol
   if (key && openEnded) {
     // e.g. a "Skills" textarea; fill but ask for review.
     const value = profileValue(key, ctx.profile, ctx.index ?? 0, field.kind);
-    if (value !== undefined) return { value, key, confidence: 'review', source: `Profile: ${key}`, reason: 'Long-form field. Check the wording.' };
+    if (value !== undefined) return { value, key, confidence: 'review', source: `From profile: ${humanize(key)}`, reason: 'Long-form field. Check the wording.' };
   }
 
   if (openEnded) return { reason: 'Open-ended question. Write this one yourself.', openEnded: true };
-  if (key) return { reason: `No "${key}" in your profile yet`, key, openEnded: false };
+  if (key) return { reason: `Add your ${humanize(key)} to your profile`, key, openEnded: false };
   const blank = matchBlankAnswer(field.label, ctx.answers);
   if (blank) return { reason: `Answer bank entry "${blank.question}" is empty`, openEnded: false };
   return { reason: 'No confident match', openEnded: false };
