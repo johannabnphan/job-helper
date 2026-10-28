@@ -19,6 +19,8 @@ export interface FieldHandle {
   section?: 'work' | 'education';
   /** 0-based work/education entry index, when the adapter knows it. */
   index?: number;
+  /** Adapter says: fill it, but ask the user to double-check (reason shown). */
+  review?: string;
 }
 
 const SKIP_INPUT_TYPES = new Set(['hidden', 'submit', 'button', 'reset', 'image', 'password', 'search', 'range', 'color']);
@@ -187,7 +189,12 @@ export function collectFields(doc: Document, adapter: Adapter): FieldHandle[] {
 
     const label = labelFor(el, adapter);
     if (/\bsearch\b/i.test(label) && kind !== 'combobox') continue;
-    const anchor = hiddenOk && !isVisible(el) ? visibleAncestor(el) : el;
+    const anchor =
+      hiddenOk && !isVisible(el)
+        ? visibleAncestor(el)
+        : kind === 'combobox' && el instanceof HTMLInputElement
+          ? (el.closest<HTMLElement>('[class*="control" i]') ?? el)
+          : el;
     if (!anchor) continue;
     out.push({
       kind,

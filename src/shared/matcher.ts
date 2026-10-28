@@ -323,7 +323,9 @@ export function profileValue(key: ProfileKey, p: Profile, index = 0, kind: Field
   const datePart = (date: string | undefined, part: 'month' | 'year') => {
     if (!date) return undefined;
     const d = parseMonthYear(date);
-    return part === 'year' ? d.year : monthName(d.month);
+    if (part === 'year') return d.year;
+    // Free-text month inputs (e.g. Workday's MM box) want a number; dropdowns get the name.
+    return kind === 'text' || kind === 'number' ? (d.month ? String(d.month).padStart(2, '0') : undefined) : monthName(d.month);
   };
   const isoDate = (date: string | undefined) => {
     if (!date) return undefined;
@@ -404,11 +406,20 @@ export function profileValue(key: ProfileKey, p: Profile, index = 0, kind: Field
 // ---------------------------------------------------------------------------
 // Answer bank
 
+/** Light stemming so "relocate" also matches "relocating" / "relocation". */
+function stem(word: string): string {
+  return word.length >= 5 ? word.replace(/(ations?|ions?|ing|ed|es|e|s)$/, '') : word;
+}
+
 function keywordIn(text: string, keyword: string): boolean {
   const k = normalize(keyword);
   if (!k) return false;
-  const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}($|[^\\p{L}\\p{N}])`, 'u').test(text);
+  const words = k.split(' ');
+  const last = words.pop()!;
+  const escape = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lastStem = stem(last);
+  const pattern = [...words.map(escape), lastStem === last ? escape(last) : `${escape(lastStem)}\\p{L}*`].join(' ');
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${pattern}($|[^\\p{L}\\p{N}])`, 'u').test(text);
 }
 
 /** Best answer whose keywords appear in the label. Longer keyword matches win. */
@@ -548,7 +559,20 @@ export function pickOption(options: string[], desired: string): OptionPick | und
   }
   if (best) return { index: best.i, exact: false };
 
-  // 7. Free-text answers: use the first sentence / first words.
+  // 7. Word overlap ("Brooklyn, NY" -> "Brooklyn, New York, United States").
+  const words = want.split(' ').filter((w) => w.length > 1).map((w) => US_STATES[w] ?? w);
+  if (words.length > 1) {
+    let top: { i: number; score: number } | undefined;
+    for (let i = 0; i < opts.length; i++) {
+      if (!real(i)) continue;
+      const hits = words.filter((w) => keywordIn(opts[i], w)).length;
+      const score = hits / words.length;
+      if (score >= 0.6 && (!top || score > top.score)) top = { i, score };
+    }
+    if (top) return { index: top.i, exact: false };
+  }
+
+  // 8. Free-text answers: use the first sentence / first words.
   const first = want.split(/[.,;:—–-]\s/)[0];
   if (first !== want) return pickOption(options, first);
   return undefined;

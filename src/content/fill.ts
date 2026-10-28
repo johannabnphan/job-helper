@@ -153,38 +153,52 @@ function closeMenu(el: HTMLElement): void {
 /**
  * Custom dropdowns (react-select on Greenhouse, Ashby, Workday). Opens the
  * menu, types to filter when it's an input, and clicks the best option.
+ * Tries a full query, then the first word, then no filter at all, because
+ * the site's own filtering may not match our wording ("BFA" vs "Bachelor's").
  * Returns undefined when no suitable option appears.
  */
-export async function setCombobox(el: HTMLElement, value: string): Promise<OptionPick | undefined> {
+export async function setCombobox(el: HTMLElement, value: string): Promise<(OptionPick & { label: string }) | undefined> {
   const doc = el.ownerDocument;
-  const isInput = el instanceof HTMLInputElement;
+  const label = (o: HTMLElement) => text(o) || o.getAttribute('aria-label') || '';
 
-  if (isInput) {
-    el.focus();
-    safeClick(el);
-    // Type a short query so long lists (schools, cities) get filtered.
-    const query = value.split(',')[0].slice(0, 40);
+  if (!(el instanceof HTMLInputElement)) {
+    if (!safeClick(el)) return undefined;
+    const options = await waitForOptions(doc, el);
+    const pick = options.length ? pickOption(options.map(label), value) : undefined;
+    if (!pick) {
+      closeMenu(el);
+      return undefined;
+    }
+    const chosen = label(options[pick.index]);
+    safeClick(options[pick.index]);
+    await sleep(150);
+    return { ...pick, label: chosen };
+  }
+
+  el.focus();
+  safeClick(el);
+  const head = value.split(',')[0].trim().slice(0, 40);
+  const queries = [...new Set([head, head.split(/\s+/)[0], ''])];
+  for (const query of queries) {
     setValueKeepFocus(el, query);
-  } else if (!safeClick(el)) {
-    return undefined;
+    let options = await waitForOptions(doc, el, query ? 2000 : 1000);
+    if (!options.length) {
+      // Some menus only open on ArrowDown.
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
+      options = await waitForOptions(doc, el, 600);
+    }
+    const pick = options.length ? pickOption(options.map(label), value) : undefined;
+    if (pick) {
+      const chosen = label(options[pick.index]);
+      safeClick(options[pick.index]);
+      await sleep(150);
+      if (visibleOptions(doc, el).length) closeMenu(el);
+      return { ...pick, label: chosen };
+    }
   }
-
-  let options = await waitForOptions(doc, el);
-  if (!options.length && isInput) {
-    // Some menus only open on ArrowDown.
-    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
-    options = await waitForOptions(doc, el, 1000);
-  }
-  const pick = options.length ? pickOption(options.map((o) => text(o) || o.getAttribute('aria-label') || ''), value) : undefined;
-  if (!pick) {
-    if (isInput) setValueKeepFocus(el, '');
-    closeMenu(el);
-    return undefined;
-  }
-  safeClick(options[pick.index]);
-  await sleep(150);
-  if (visibleOptions(doc, el).length) closeMenu(el);
-  return pick;
+  setValueKeepFocus(el, '');
+  closeMenu(el);
+  return undefined;
 }
 
 function setValueKeepFocus(el: HTMLInputElement, value: string): void {
@@ -199,7 +213,8 @@ export function comboboxHasValue(el: HTMLElement): boolean {
   if (el instanceof HTMLInputElement) {
     if (el.value.trim()) return true;
     const control = el.closest('[class*="control" i], [class*="select" i]');
-    return Boolean(control?.querySelector('[class*="single-value" i], [class*="singleValue" i]'));
+    const single = control?.querySelector('[class*="single-value" i], [class*="singleValue" i], [class*="multi-value" i]');
+    return Boolean(single && text(single));
   }
   const t = text(el);
   return Boolean(t) && !/^(select|choose|please select|--)/i.test(t);

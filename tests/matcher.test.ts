@@ -87,7 +87,8 @@ describe('profileValue', () => {
   });
   it('indexes work entries and splits dates', () => {
     expect(profileValue('workCompany', p, 1)).toBe('Contoso');
-    expect(profileValue('workStartMonth', p, 1)).toBe('June');
+    expect(profileValue('workStartMonth', p, 1, 'select')).toBe('June');
+    expect(profileValue('workStartMonth', p, 1, 'text')).toBe('06');
     expect(profileValue('workEndYear', p, 1)).toBe('2020');
     expect(profileValue('workEndYear', p, 0)).toBeUndefined(); // current job
     expect(profileValue('workStart', p, 0, 'month')).toBe('2021-01');
@@ -142,5 +143,20 @@ describe('answer bank', () => {
 
     const r4 = resolveField(f('Are you willing to relocate?', 'radio'), ctx);
     expect(!isResolved(r4) && r4.reason).toMatch(/empty/);
+  });
+});
+
+describe('pickOption word overlap', () => {
+  it('matches city + state abbreviation to a long location option', () => {
+    expect(pickOption(['Brookline, Massachusetts, United States', 'Brooklyn, New York, United States'], 'Brooklyn, NY')?.index).toBe(1);
+  });
+});
+
+describe('keyword stemming', () => {
+  it('matches word forms of a keyword', () => {
+    const answers = [{ id: '1', question: 'Relocation', keywords: ['relocate'], answer: 'Yes' }];
+    expect(matchAnswer('Are you open to relocating to New York?', answers)?.answer).toBe('Yes');
+    expect(matchAnswer('Relocation assistance needed?', answers)?.answer).toBe('Yes');
+    expect(matchAnswer('Are you local?', answers)).toBeUndefined();
   });
 });

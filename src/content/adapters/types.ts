@@ -1,3 +1,4 @@
+import type { FillPayload } from '../../shared/messages';
 import type { FieldHandle } from '../fields';
 
 /**
@@ -17,4 +18,6 @@ export interface Adapter {
   skip?(el: HTMLElement): boolean;
   /** Custom widgets the generic scan can't see (e.g. Yes/No button pairs). */
   extraFields?(root: ParentNode): FieldHandle[];
+  /** Extra things to tell the user, e.g. "click Add for your other jobs". */
+  notes?(doc: Document, payload: FillPayload): Array<{ anchor: HTMLElement; message: string }>;
 }

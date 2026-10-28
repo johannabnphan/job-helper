@@ -21,7 +21,7 @@ const YES = /^(yes|y|true|i agree|i do|i am|i have|i will)\b/i;
 const ISO_DATE = /^\d{4}-\d{2}(-\d{2})?$/;
 
 function short(label: string): string {
-  const t = label.replace(/\s*\*\s*$/, '').trim();
+  const t = label.replace(/[\s*✱]+$/, '').trim();
   return t.length > 70 ? `${t.slice(0, 67)}…` : t || '(unlabeled field)';
 }
 
@@ -30,12 +30,14 @@ function alreadyAnswered(f: FieldHandle): boolean {
   switch (f.kind) {
     case 'radio':
       return (f.choices as HTMLInputElement[]).some((r) => r.checked);
+    case 'combobox':
+      return f.choices
+        ? f.choices.some((b) => b.getAttribute('aria-pressed') === 'true' || /\b_?(active|selected)/i.test(b.className))
+        : comboboxHasValue(f.el);
     case 'checkbox':
       return false;
-    case 'combobox':
-      return comboboxHasValue(f.el);
     default:
-      return f.choices ? f.choices.some((b) => b.getAttribute('aria-pressed') === 'true') : hasValue(f.el);
+      return hasValue(f.el);
   }
 }
 
@@ -86,13 +88,16 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
       if (!isResolved(res)) {
         // Optional checkboxes we don't recognise (newsletters etc.) aren't worth flagging.
         if (f.kind === 'checkbox' && !f.required) continue;
-        record(f, 'missing', res.reason);
+        // Unknown optional fields are worth a look but don't block anything.
+        const optional = !f.required && !res.openEnded && !res.key;
+        record(f, optional ? 'review' : 'missing', optional ? `Optional: ${res.reason.toLowerCase()}` : res.reason);
         continue;
       }
 
-      const review = res.confidence === 'review';
+      const review = res.confidence === 'review' || Boolean(f.review);
+      const reviewReason = res.confidence === 'review' ? (res.reason ?? 'Check this answer') : (f.review ?? 'Check this answer');
       const done = (fuzzy = false, shown = res.value) =>
-        record(f, review || fuzzy ? 'review' : 'filled', review ? (res.reason ?? 'Check this answer') : fuzzy ? `Closest option chosen for "${res.value}"` : res.source, shown);
+        record(f, review || fuzzy ? 'review' : 'filled', review ? reviewReason : fuzzy ? `Closest option chosen for "${res.value}"` : res.source, shown);
 
       switch (f.kind) {
         case 'select': {
@@ -113,7 +118,7 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
           break;
         case 'combobox': {
           const pick = f.choices ? setButtonChoice(f.choices, res.value) : await setCombobox(f.el, res.value);
-          if (pick) done(!pick.exact);
+          if (pick) done(!pick.exact, 'label' in pick ? String(pick.label) : f.options?.[pick.index]);
           else record(f, 'missing', `Choose "${res.value}" (or the closest option) manually`);
           break;
         }
@@ -132,6 +137,11 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
       console.warn('[Job Helper] failed on field', f, err);
       record(f, 'missing', 'Could not fill this field automatically');
     }
+  }
+
+  for (const note of adapter.notes?.(doc, payload) ?? []) {
+    reports.push({ label: adapter.name, status: 'missing', detail: note.message });
+    marks.push({ anchor: note.anchor, watch: note.anchor, status: 'missing', message: `Needs you: ${note.message}` });
   }
 
   if (marks.length) overlay.show(marks);
