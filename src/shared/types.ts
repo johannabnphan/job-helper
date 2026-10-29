@@ -75,7 +75,11 @@ export interface Answer {
   question: string;
   /** Words or phrases that identify the question on a form. */
   keywords: string[];
+  /** Other full wordings of the question, matched by word overlap. */
+  phrasings?: string[];
   answer: string;
+  /** Other ways to say the answer, used to pick dropdown/radio options. */
+  variants?: string[];
 }
 
 export type JobStatus = 'to_apply' | 'filled' | 'applied';

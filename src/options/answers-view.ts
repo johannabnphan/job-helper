@@ -4,6 +4,8 @@ import { getAnswers, saveAnswers } from '../shared/storage';
 import type { Answer } from '../shared/types';
 import { h, toast } from '../shared/ui';
 
+const lines = (v: string) => v.split('\n').map((l) => l.trim()).filter(Boolean);
+
 export class AnswersView {
   private answers: Answer[] = [];
   readonly el = h('div', { class: 'stack' });
@@ -25,6 +27,8 @@ export class AnswersView {
         .map((k) => k.trim().toLowerCase())
         .filter(Boolean);
       a.answer = card.querySelector<HTMLTextAreaElement>('[name=answer]')!.value;
+      a.phrasings = lines(card.querySelector<HTMLTextAreaElement>('[name=phrasings]')!.value);
+      a.variants = lines(card.querySelector<HTMLTextAreaElement>('[name=variants]')!.value);
     }
   }
 
@@ -37,6 +41,10 @@ export class AnswersView {
     question.value = a.question;
     const keywords = h('input', { name: 'keywords', oninput: this.dirty });
     keywords.value = a.keywords.join(', ');
+    const phrasings = h('textarea', { name: 'phrasings', rows: 2, oninput: this.dirty, placeholder: 'e.g. Will you now or in the future require sponsorship for employment visa status?' });
+    phrasings.value = (a.phrasings ?? []).join('\n');
+    const variants = h('textarea', { name: 'variants', rows: 2, oninput: this.dirty, placeholder: 'e.g. I do not require sponsorship\nNot required' });
+    variants.value = (a.variants ?? []).join('\n');
     return h(
       'div',
       { class: 'card stack', 'data-answer-id': a.id },
@@ -60,7 +68,9 @@ export class AnswersView {
         ),
       ),
       h('label', { class: 'field' }, h('span', {}, 'Keywords (comma-separated). A form question matches when its label contains one of these.'), keywords),
+      h('label', { class: 'field' }, h('span', {}, 'Other ways the question is asked (one per line). Matched by similar wording; loose matches are flagged.'), phrasings),
       h('label', { class: 'field' }, h('span', {}, 'Answer'), answer),
+      h('label', { class: 'field' }, h('span', {}, 'Other ways to say the answer (one per line). Used to pick the closest dropdown or radio option.'), variants),
     );
   }
 

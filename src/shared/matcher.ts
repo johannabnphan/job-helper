@@ -110,6 +110,8 @@ export interface Resolution {
   source: string; // human readable, e.g. "Profile: email" or "Answer: Visa sponsorship"
   key?: ProfileKey;
   reason?: string;
+  /** Other acceptable wordings of the value (answer variants), for option matching. */
+  variants?: string[];
 }
 
 export interface Unresolved {
@@ -422,23 +424,68 @@ function keywordIn(text: string, keyword: string): boolean {
   return new RegExp(`(^|[^\\p{L}\\p{N}])${pattern}($|[^\\p{L}\\p{N}])`, 'u').test(text);
 }
 
-/** Best answer whose keywords appear in the label. Longer keyword matches win. */
-export function matchAnswer(label: string, answers: Answer[]): Answer | undefined {
+const STOP = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'for', 'you', 'your', 'are', 'do', 'is', 'be', 'or', 'and', 'with', 'at', 'on', 'this', 'we', 'our', 'us', 'will', 'have', 'would', 'what', 'please', 'any', 'it']);
+
+function contentWords(s: string): string[] {
+  return normalize(s)
+    .split(' ')
+    .filter((w) => w.length > 1 && !STOP.has(w))
+    .map(stem);
+}
+
+/** Dice similarity of the content words of two questions (0-1). */
+export function questionSimilarity(a: string, b: string): number {
+  const x = new Set(contentWords(a));
+  const y = new Set(contentWords(b));
+  if (!x.size || !y.size) return 0;
+  let common = 0;
+  for (const w of x) if (y.has(w)) common++;
+  return (2 * common) / (x.size + y.size);
+}
+
+export interface AnswerMatch {
+  answer: Answer;
+  /** True when only a loose phrasing match was found; the field gets flagged. */
+  weak: boolean;
+}
+
+/**
+ * Best saved answer for a question. Keywords count as strong matches (longer
+ * keywords win); alternate phrasings match by word overlap, strong at 0.7+
+ * and weak at 0.5+.
+ */
+export function findAnswer(label: string, answers: Answer[]): AnswerMatch | undefined {
   const text = normalize(label);
-  let best: { a: Answer; score: number } | undefined;
+  let best: { a: Answer; score: number; weak: boolean } | undefined;
   for (const a of answers) {
     if (!a.answer.trim()) continue;
     let score = 0;
     for (const k of a.keywords) if (keywordIn(text, k)) score += normalize(k).length + 5;
-    if (score && (!best || score > best.score)) best = { a, score };
+    let weak = false;
+    if (!score) {
+      const sim = Math.max(0, ...(a.phrasings ?? []).map((p) => questionSimilarity(label, p)), questionSimilarity(label, a.question) * 0.9);
+      if (sim >= 0.7) score = sim * 10;
+      else if (sim >= 0.5) {
+        score = sim * 5;
+        weak = true;
+      }
+    }
+    if (score && (!best || score > best.score)) best = { a, score, weak };
   }
-  return best?.a;
+  return best && { answer: best.a, weak: best.weak };
+}
+
+/** Best answer whose keywords or phrasings match the label. */
+export function matchAnswer(label: string, answers: Answer[]): Answer | undefined {
+  return findAnswer(label, answers)?.answer;
 }
 
 /** Saved answers whose keywords match but which are still blank (so we can say why we flagged). */
 export function matchBlankAnswer(label: string, answers: Answer[]): Answer | undefined {
   const text = normalize(label);
-  return answers.find((a) => !a.answer.trim() && a.keywords.some((k) => keywordIn(text, k)));
+  return answers.find(
+    (a) => !a.answer.trim() && (a.keywords.some((k) => keywordIn(text, k)) || (a.phrasings ?? []).some((p) => questionSimilarity(label, p) >= 0.7)),
+  );
 }
 
 const OPEN_ENDED_RE =
@@ -497,7 +544,14 @@ const NO_RE = /^(no|n|false|i am not|i do not|i don't|i will not|i won't|i have 
 export interface OptionPick {
   index: number;
   exact: boolean;
+  /** 0-1: how sure we are that this option means the desired value. */
+  score: number;
 }
+
+/** Below this, an option choice is a weak match and gets flagged for review. */
+export const WEAK_OPTION = 0.8;
+
+const hit = (index: number, score: number): OptionPick => ({ index, score, exact: score >= 0.95 });
 
 /**
  * Chooses the option that best matches `desired`. Handles yes/no answers,
@@ -512,7 +566,7 @@ export function pickOption(options: string[], desired: string): OptionPick | und
 
   // 1. Exact (including aliases).
   const aliases = aliasesOf(desired);
-  for (let i = 0; i < opts.length; i++) if (real(i) && aliases.includes(opts[i])) return { index: i, exact: true };
+  for (let i = 0; i < opts.length; i++) if (real(i) && aliases.includes(opts[i])) return hit(i, 1);
 
   // 2. Yes / No.
   const yes = YES_RE.test(want);
@@ -520,20 +574,20 @@ export function pickOption(options: string[], desired: string): OptionPick | und
   if (yes !== no) {
     const re = yes ? YES_RE : NO_RE;
     const i = opts.findIndex((o, j) => real(j) && re.test(o));
-    if (i >= 0) return { index: i, exact: want === 'yes' || want === 'no' };
+    if (i >= 0) return hit(i, want === 'yes' || want === 'no' ? 1 : 0.85);
   }
 
   // 3. Decline-type answers.
   if (/decline|prefer not|don't wish|do not wish|not to disclose|rather not/.test(want)) {
     const i = opts.findIndex((o, j) => real(j) && /decline|prefer not|don't wish|do not wish|not to disclose|rather not|not specified/.test(o));
-    if (i >= 0) return { index: i, exact: true };
+    if (i >= 0) return hit(i, 0.9);
   }
 
   // 4. Degree levels ("BFA" -> "Bachelor's Degree").
   for (const [wantRe, optRe] of DEGREE_LEVELS) {
     if (wantRe.test(want)) {
       const i = opts.findIndex((o, j) => real(j) && optRe.test(o));
-      if (i >= 0) return { index: i, exact: false };
+      if (i >= 0) return hit(i, 0.75);
     }
   }
 
@@ -541,11 +595,11 @@ export function pickOption(options: string[], desired: string): OptionPick | und
   const mi = MONTHS.findIndex((m) => m === want || m.slice(0, 3) === want);
   if (mi >= 0) {
     const i = opts.findIndex((o, j) => real(j) && (o === MONTHS[mi] || o === MONTHS[mi].slice(0, 3) || Number(o) === mi + 1));
-    if (i >= 0) return { index: i, exact: true };
+    if (i >= 0) return hit(i, 1);
   }
 
   // 6. Prefix / containment (both directions), preferring the closest length.
-  let best: { i: number; d: number } | undefined;
+  let best: { i: number; d: number; ratio: number } | undefined;
   for (let i = 0; i < opts.length; i++) {
     if (!real(i)) continue;
     const o = opts[i];
@@ -553,11 +607,11 @@ export function pickOption(options: string[], desired: string): OptionPick | und
       if (a.length < 2) continue;
       if (o.startsWith(a) || a.startsWith(o) || (a.length >= 4 && o.includes(a)) || (o.length >= 4 && a.includes(o))) {
         const d = Math.abs(o.length - a.length);
-        if (!best || d < best.d) best = { i, d };
+        if (!best || d < best.d) best = { i, d, ratio: Math.min(o.length, a.length) / Math.max(o.length, a.length) };
       }
     }
   }
-  if (best) return { index: best.i, exact: false };
+  if (best) return hit(best.i, Math.min(0.9, 0.55 + 0.35 * best.ratio));
 
   // 7. Word overlap ("Brooklyn, NY" -> "Brooklyn, New York, United States").
   const words = want.split(' ').filter((w) => w.length > 1).map((w) => US_STATES[w] ?? w);
@@ -569,13 +623,27 @@ export function pickOption(options: string[], desired: string): OptionPick | und
       const score = hits / words.length;
       if (score >= 0.6 && (!top || score > top.score)) top = { i, score };
     }
-    if (top) return { index: top.i, exact: false };
+    if (top) return hit(top.i, 0.45 + 0.35 * top.score);
   }
 
   // 8. Free-text answers: use the first sentence / first words.
   const first = want.split(/[.,;:—–-]\s/)[0];
-  if (first !== want) return pickOption(options, first);
+  if (first !== want) {
+    const p = pickOption(options, first);
+    return p && hit(p.index, p.score * 0.9);
+  }
   return undefined;
+}
+
+/** Best option across several wordings of the same answer (answer variants). */
+export function pickBestOption(options: string[], wordings: string[]): OptionPick | undefined {
+  let best: OptionPick | undefined;
+  for (const w of wordings) {
+    const p = pickOption(options, w);
+    if (p && (!best || p.score > best.score)) best = p;
+    if (best?.score === 1) break;
+  }
+  return best;
 }
 
 // ---------------------------------------------------------------------------
@@ -602,13 +670,19 @@ export function resolveField(field: FieldDescriptor, ctx: ResolveContext): Resol
     if (value !== undefined) return { value, key, confidence: 'high', source: `From profile: ${humanize(key)}` };
   }
 
-  const answer = matchAnswer(field.label, ctx.answers);
-  if (answer) {
+  const found = findAnswer(field.label, ctx.answers);
+  if (found) {
+    const { answer, weak } = found;
     return {
       value: answer.answer.trim(),
-      confidence: openEnded ? 'review' : 'high',
+      variants: (answer.variants ?? []).map((v) => v.trim()).filter(Boolean),
+      confidence: openEnded || weak ? 'review' : 'high',
       source: `From answer bank: ${answer.question || answer.keywords[0]}`,
-      reason: openEnded ? 'Open-ended question filled from your answer bank. Tailor it to this role.' : undefined,
+      reason: openEnded
+        ? 'Open-ended question filled from your answer bank. Tailor it to this role.'
+        : weak
+          ? `Loose match to your saved answer "${answer.question}". Check it fits.`
+          : undefined,
     };
   }
 

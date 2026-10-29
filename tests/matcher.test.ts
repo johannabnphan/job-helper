@@ -5,7 +5,11 @@ import {
   matchAnswer,
   matchProfileKey,
   parseMonthYear,
+  pickBestOption,
   pickOption,
+  findAnswer,
+  questionSimilarity,
+  WEAK_OPTION,
   profileValue,
   resolveField,
   type FieldDescriptor,
@@ -101,7 +105,7 @@ describe('profileValue', () => {
 
 describe('pickOption', () => {
   it('handles yes/no', () => {
-    expect(pickOption(['Select...', 'Yes', 'No'], 'no')).toEqual({ index: 2, exact: true });
+    expect(pickOption(['Select...', 'Yes', 'No'], 'no')).toMatchObject({ index: 2, exact: true, score: 1 });
     expect(pickOption(['Yes, I am authorized', 'No, I am not'], 'yes')?.index).toBe(0);
     expect(pickOption(['Yes', 'No'], 'No, I will not need sponsorship.')?.index).toBe(1);
   });
@@ -158,5 +162,46 @@ describe('keyword stemming', () => {
     expect(matchAnswer('Are you open to relocating to New York?', answers)?.answer).toBe('Yes');
     expect(matchAnswer('Relocation assistance needed?', answers)?.answer).toBe('Yes');
     expect(matchAnswer('Are you local?', answers)).toBeUndefined();
+  });
+});
+
+describe('answer variants and phrasings', () => {
+  const answers = [
+    {
+      id: 's',
+      question: 'Visa sponsorship',
+      keywords: [],
+      phrasings: ['Will you now or in the future require sponsorship for employment visa status?'],
+      answer: 'No',
+      variants: ['I do not require sponsorship', 'Not required'],
+    },
+  ];
+
+  it('matches a differently worded question by phrasing', () => {
+    const m = findAnswer('Do you require visa sponsorship now or in the future?', answers);
+    expect(m?.answer.id).toBe('s');
+    expect(m?.weak).toBe(false);
+  });
+
+  it('flags a loose phrasing match as weak', () => {
+    const m = findAnswer('Will you require employment sponsorship?', answers);
+    expect(m?.weak).toBe(true);
+  });
+
+  it('ignores unrelated questions', () => {
+    expect(findAnswer('What is your favorite color?', answers)).toBeUndefined();
+    expect(questionSimilarity('a b', '')).toBe(0);
+  });
+
+  it('uses answer variants to pick dropdown options', () => {
+    const opts = ['Sponsorship required', 'Sponsorship not required'];
+    const p = pickBestOption(opts, ['No', 'I do not require sponsorship', 'Not required']);
+    expect(p?.index).toBe(1);
+  });
+
+  it('scores weak option picks below the threshold', () => {
+    const p = pickOption(["High School", "Bachelor's Degree"], 'BFA');
+    expect(p!.score).toBeLessThan(WEAK_OPTION);
+    expect(pickOption(['Yes', 'No'], 'Yes')!.score).toBeGreaterThanOrEqual(WEAK_OPTION);
   });
 });
