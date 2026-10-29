@@ -50,7 +50,13 @@ export function companyFromUrl(raw: string): string {
     }
     if (/(^|\.)lever\.co$/.test(host) || /(^|\.)ashbyhq\.com$/.test(host)) return seg[0] ? titleCase(seg[0]) : '';
     if (/myworkdayjobs\.com$|myworkdaysite\.com$|myworkday\.com$/.test(host)) return titleCase(host.split('.')[0]);
-    if (/(^|\.)smartrecruiters\.com$/.test(host) || /(^|\.)workable\.com$/.test(host)) return seg[0] ? titleCase(seg[0]) : '';
+    if (/(^|\.)smartrecruiters\.com$/.test(host)) {
+      // jobs.smartrecruiters.com/<Company>/<id> or /oneclick-ui/company/<Company>/publication/<id>
+      const i = seg.indexOf('company');
+      const name = i >= 0 ? seg[i + 1] : seg[0] === 'oneclick-ui' ? '' : seg[0];
+      return name ? titleCase(name.replace(/([a-z])([A-Z])/g, '$1 $2')) : '';
+    }
+    if (/(^|\.)workable\.com$/.test(host)) return seg[0] ? titleCase(seg[0]) : '';
     const parts = host.replace(/^(www|jobs|careers|boards|apply)\./, '').split('.');
     return titleCase(parts.length > 1 ? parts[parts.length - 2] : parts[0]);
   } catch {
@@ -65,6 +71,7 @@ export function atsName(raw: string): string | undefined {
     if (/lever\.co$/.test(host)) return 'Lever';
     if (/ashbyhq\.com$/.test(host)) return 'Ashby';
     if (/myworkdayjobs\.com$|myworkdaysite\.com$|myworkday\.com$/.test(host)) return 'Workday';
+    if (/smartrecruiters\.com$/.test(host)) return 'SmartRecruiters';
   } catch {
     /* not a URL */
   }

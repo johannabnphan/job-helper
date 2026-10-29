@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Easy apply - Global Product Marketing Manager (fixture)</title>
+<style>body{font:14px system-ui;max-width:700px;margin:30px auto}.row{display:flex;gap:16px}.row>*{flex:1}</style>
+</head>
+<body>
+<!-- Mimics SmartRecruiters one-click apply: every field is a web component with an open shadow root. -->
+<oc-app>
+  <h2>Easy Apply</h2>
+  <spl-dropzone label="Resume"></spl-dropzone>
+  <button type="button" id="linkedin" onclick="window.__linkedin = true">Apply With LinkedIn</button>
+  <h2>Personal information</h2>
+  <div class="row"><spl-input label="First name" required></spl-input><spl-input label="Last name" required></spl-input></div>
+  <div class="row"><spl-input label="Email" type="email" required></spl-input><spl-input label="Confirm your email" type="email" required></spl-input></div>
+  <div class="row"><spl-autocomplete label="City" required></spl-autocomplete><spl-input label="Phone number" type="tel" required></spl-input></div>
+  <section id="experience"><h2>Experience</h2><div class="blocks"></div><spl-button>+ Add</spl-button></section>
+  <spl-button id="submit" kind="submit">Submit</spl-button>
+</oc-app>
+<script>
+  const css = 'label{display:block;margin:10px 0 4px}input{width:100%;padding:8px;box-sizing:border-box}';
+  customElements.define('spl-input', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = `<style>${css}</style><label for="i">${this.getAttribute('label')}</label><input id="i" type="${this.getAttribute('type') || 'text'}">`;
+      // The component only reports values it sees through composed input events.
+      r.querySelector('input').addEventListener('input', (e) => (this.value = e.target.value));
+    }
+  });
+  customElements.define('spl-autocomplete', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = `<style>${css} [role=option]{padding:4px;border:1px solid #ccc}</style><label for="i">${this.getAttribute('label')}</label>
+        <input id="i" role="combobox" aria-autocomplete="list" aria-controls="lb"><div id="lb" role="listbox"></div>`;
+      const input = r.querySelector('input'), lb = r.querySelector('#lb');
+      input.addEventListener('input', () => {
+        const q = input.value.toLowerCase();
+        lb.innerHTML = '';
+        if (!q) return;
+        for (const c of ['Brooklyn, NY, United States', 'Brookline, MA, United States', 'Sunnyvale, CA, United States'].filter((c) => c.toLowerCase().includes(q))) {
+          const o = document.createElement('div');
+          o.setAttribute('role', 'option');
+          o.textContent = c;
+          o.addEventListener('click', () => { input.value = c; this.value = c; lb.innerHTML = ''; });
+          lb.append(o);
+        }
+      });
+    }
+  });
+  customElements.define('spl-dropzone', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = `<div style="border:2px dashed #36c;padding:20px;text-align:center">Choose a file or drop it here<input type="file" id="f" style="display:none" aria-label="Resume"></div>`;
+    }
+  });
+  customElements.define('spl-button', class extends HTMLElement {
+    connectedCallback() {
+      if (this.shadowRoot) return;
+      const r = this.attachShadow({ mode: 'open' });
+      r.innerHTML = `<button type="button"><slot></slot></button>`;
+    }
+  });
+  // "+ Add" renders a new experience block asynchronously.
+  document.querySelector('#experience spl-button').addEventListener('click', () => setTimeout(() => {
+    const b = document.createElement('div');
+    b.className = 'block';
+    b.innerHTML = '<spl-input label="Title"></spl-input><spl-input label="Company"></spl-input>';
+    document.querySelector('#experience .blocks').append(b);
+  }, 200));
+  document.getElementById('submit').addEventListener('click', () => (window.__submitted = true));
+
+  const inner = (host) => host.shadowRoot.querySelector('input');
+  const byLabel = (l) => [...document.querySelectorAll('spl-input, spl-autocomplete')].find((e) => e.getAttribute('label') === l);
+  window.__expect = () => {
+    const blocks = [...document.querySelectorAll('#experience .block')];
+    const v = (b, l) => inner([...b.querySelectorAll('spl-input')].find((e) => e.getAttribute('label') === l)).value;
+    return {
+      'first name (inside shadow root)': inner(byLabel('First name')).value === 'Alex',
+      'component saw the input event': byLabel('First name').value === 'Alex',
+      'last name': inner(byLabel('Last name')).value === 'Rivera',
+      'email': inner(byLabel('Email')).value === 'alex.rivera@example.com',
+      'confirm email': inner(byLabel('Confirm your email')).value === 'alex.rivera@example.com',
+      'city picked from shadow listbox': inner(byLabel('City')).value === 'Brooklyn, NY, United States',
+      'phone': inner(byLabel('Phone number')).value === '(555) 123-4567',
+      'resume attached in shadow dropzone': document.querySelector('spl-dropzone').shadowRoot.querySelector('input').files.length === 1,
+      'two experience blocks added': blocks.length === 2,
+      'experience filled in order': blocks.length === 2 && v(blocks[0], 'Company') === 'Northwind Labs' && v(blocks[1], 'Title') === 'Product Designer',
+      'Apply With LinkedIn not clicked': !window.__linkedin,
+    };
+  };
+</script>
+</body>
+</html>

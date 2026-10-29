@@ -30,7 +30,8 @@ network calls.
   title is picked up when you open the page.
 - **Autofill**: *Fill this page* in the side panel, or `Alt+Shift+F`. Fills text, dropdown,
   radio, checkbox, file-upload and custom combobox fields. A generic label matcher works on
-  any site, with adapters for **Greenhouse, Lever, Ashby and Workday**.
+  any site, with adapters for **Greenhouse, Lever, Ashby and Workday**. Forms built from web
+  components (shadow DOM), such as SmartRecruiters one-click apply, work too.
   - **Fills everything itself.** It never uses a site's "autofill with resume" button. The
     resume is attached *last*, and anything the site's parser changes afterwards is corrected.
   - **Repeating sections.** When the form has "Add experience" or "Add education", Job

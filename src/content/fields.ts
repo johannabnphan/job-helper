@@ -1,6 +1,7 @@
 // Finds fillable fields on the page and works out each one's question text.
 import type { FieldDescriptor, FieldKind, ProfileKey } from '../shared/matcher';
 import type { Adapter } from './adapters/types';
+import { byIdNear, closestDeep, deepQueryAll, hostOf, parentOf } from './dom';
 
 export interface FieldHandle {
   kind: FieldKind;
@@ -41,11 +42,11 @@ export function isVisible(el: Element): boolean {
   return el.getClientRects().length > 0;
 }
 
-function byIds(ids: string | null, doc: Document): string {
+function byIds(ids: string | null, near: Element): string {
   if (!ids) return '';
   return ids
     .split(/\s+/)
-    .map((id) => text(doc.getElementById(id)))
+    .map((id) => text(byIdNear(near, id)))
     .filter(Boolean)
     .join(' ');
 }
@@ -62,18 +63,17 @@ function nearbyText(el: HTMLElement): string {
       const t = sib.matches(LABELISH) ? text(sib) : '';
       if (t && t.length <= 300) return t;
     }
-    node = node.parentElement;
+    node = parentOf(node);
     if (node && node.querySelectorAll('input, select, textarea').length > 3) break;
   }
   return '';
 }
 
 export function labelFor(el: HTMLElement, adapter: Adapter): string {
-  const doc = el.ownerDocument;
   const fromAdapter = adapter.label?.(el);
   if (fromAdapter) return fromAdapter;
 
-  const labelledBy = byIds(el.getAttribute('aria-labelledby'), doc);
+  const labelledBy = byIds(el.getAttribute('aria-labelledby'), el);
   if (labelledBy) return labelledBy;
 
   if ('labels' in el) {
@@ -87,7 +87,11 @@ export function labelFor(el: HTMLElement, adapter: Adapter): string {
   const legend = el.closest('fieldset')?.querySelector('legend');
   if (legend && (el as HTMLInputElement).type === 'radio') return text(legend);
 
-  return nearbyText(el) || el.getAttribute('placeholder') || el.getAttribute('title') || '';
+  // Web components often carry the label on the host element.
+  const host = hostOf(el);
+  const hostLabel = host ? host.getAttribute('label') || host.getAttribute('aria-label') || host.getAttribute('placeholder') || byIds(host.getAttribute('aria-labelledby'), host) : '';
+  if (hostLabel) return hostLabel;
+  return nearbyText(el) || (host ? nearbyText(host) : '') || el.getAttribute('placeholder') || el.getAttribute('title') || '';
 }
 
 /** Question text for a radio group: the fieldset legend or the container's label. */
@@ -97,7 +101,7 @@ function groupLabel(radios: HTMLInputElement[], adapter: Adapter): string {
   if (fromAdapter) return fromAdapter;
   const group = first.closest('[role="radiogroup"], fieldset');
   if (group) {
-    const t = byIds(group.getAttribute('aria-labelledby'), first.ownerDocument) || group.getAttribute('aria-label') || text(group.querySelector('legend'));
+    const t = byIds(group.getAttribute('aria-labelledby'), group) || group.getAttribute('aria-label') || text(group.querySelector('legend'));
     if (t) return t;
   }
   // Walk up until the container holds the whole group, then look just before it.
@@ -132,8 +136,8 @@ const SECTION_HEADING = 'h1, h2, h3, h4, h5, legend, [role="heading"], [class*="
 
 /** Work/education context from the nearest section heading above the field. */
 export function sectionOf(el: HTMLElement): 'work' | 'education' | undefined {
-  let node: HTMLElement | null = el.parentElement;
-  for (let depth = 0; depth < 8 && node; depth++, node = node.parentElement) {
+  let node: HTMLElement | null = parentOf(el);
+  for (let depth = 0; depth < 8 && node; depth++, node = parentOf(node)) {
     const prev = node.previousElementSibling;
     const heading = [...node.children].find((c) => c.matches(SECTION_HEADING)) ?? (prev?.matches(SECTION_HEADING) ? prev : null);
     const t = heading ? text(heading).toLowerCase() : '';
@@ -149,8 +153,8 @@ export function sectionOf(el: HTMLElement): 'work' | 'education' | undefined {
 function formRoot(doc: Document, adapter: Adapter): ParentNode {
   const custom = adapter.root?.(doc);
   if (custom) return custom;
-  const forms = [...doc.querySelectorAll('form')]
-    .map((f) => ({ f, n: f.querySelectorAll('input:not([type=hidden]), select, textarea').length }))
+  const forms = deepQueryAll(doc, 'form')
+    .map((f) => ({ f, n: deepQueryAll(f, 'input:not([type=hidden]), select, textarea').length }))
     .sort((a, b) => b.n - a.n);
   return forms[0] && forms[0].n >= 3 ? forms[0].f : doc.body;
 }
@@ -160,11 +164,11 @@ export function collectFields(doc: Document, adapter: Adapter): FieldHandle[] {
   const out: FieldHandle[] = [];
   const radioGroups = new Map<string, HTMLInputElement[]>();
 
-  const candidates = root.querySelectorAll<HTMLElement>(
+  const candidates = deepQueryAll<HTMLElement>(root,
     'input, select, textarea, [role="combobox"]:not(input), button[aria-haspopup="listbox"]',
   );
   for (const el of candidates) {
-    if (el.closest('header, nav, [role="search"], [role="navigation"], footer, [data-job-helper]')) continue;
+    if (closestDeep(el, 'header, nav, [role="search"], [role="navigation"], footer, [data-job-helper]')) continue;
     if (adapter.skip?.(el)) continue;
     const kind = kindOf(el);
     if (!kind) continue;
@@ -235,7 +239,7 @@ export function collectFields(doc: Document, adapter: Adapter): FieldHandle[] {
 
 export function visibleAncestor(el: HTMLElement): HTMLElement | null {
   let node: HTMLElement | null = el;
-  for (let i = 0; i < 5 && node; i++, node = node.parentElement) if (isVisible(node)) return node;
+  for (let i = 0; i < 5 && node; i++, node = parentOf(node)) if (isVisible(node)) return node;
   return null;
 }
 

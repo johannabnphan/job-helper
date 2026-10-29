@@ -5,6 +5,7 @@ import type { FillPayload } from '../shared/messages';
 import { matchProfileKey, type ProfileKey } from '../shared/matcher';
 import type { Adapter } from './adapters/types';
 import { collectFields, isVisible, sectionOf, text, toDescriptor } from './fields';
+import { closestDeep, deepQueryAll, hostOf } from './dom';
 import { couldSubmit, safeClick } from './fill';
 
 type Kind = 'work' | 'education';
@@ -36,22 +37,27 @@ function countBlocks(doc: Document, adapter: Adapter, kind: Kind): number {
   return Math.max(0, ...counts.values());
 }
 
+/** Visible text of a button; for a button inside a web component, the host's slotted text. */
+function buttonText(b: HTMLElement): string {
+  return text(b) || (b.querySelector('slot') ? text(hostOf(b)) : '');
+}
+
 function addLabel(b: HTMLElement): string {
-  return `${b.getAttribute('aria-label') ?? ''} ${text(b)} ${b.getAttribute('data-automation-id') ?? ''}`.trim();
+  return `${b.getAttribute('aria-label') ?? ''} ${buttonText(b)} ${b.getAttribute('data-automation-id') ?? ''}`.trim();
 }
 
 /** The "Add …" button for a section, or undefined. Never anything that could submit. */
 export function findAddButton(doc: Document, kind: Kind): HTMLElement | undefined {
-  const candidates = [...doc.querySelectorAll<HTMLElement>('button, [role="button"]')].filter(
+  const candidates = deepQueryAll<HTMLElement>(doc, 'button, [role="button"]').filter(
     (b) => isVisible(b) && !couldSubmit(b) && !b.closest('[data-job-helper]') && !(b as HTMLButtonElement).disabled,
   );
   const explicit = candidates.find((b) => SPEC[kind].add.test(addLabel(b)));
   if (explicit) return explicit;
   // A plain "Add" / "+ Add another" button under a Work Experience / Education heading.
   return candidates.find((b) => {
-    const label = text(b) || b.getAttribute('aria-label') || '';
+    const label = buttonText(b) || b.getAttribute('aria-label') || '';
     if (!GENERIC_ADD.test(label) && b.getAttribute('data-automation-id') !== 'add-button') return false;
-    const group = b.closest('[role="group"], section, fieldset');
+    const group = closestDeep(b, '[role="group"], section, fieldset');
     const heading = group ? text(group.querySelector('h1, h2, h3, h4, legend, [role="heading"]')).toLowerCase() : '';
     const section = /experience|employment|work history/.test(heading) ? 'work' : /education/.test(heading) ? 'education' : sectionOf(b);
     return section === kind;

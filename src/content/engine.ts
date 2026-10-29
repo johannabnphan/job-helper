@@ -34,6 +34,7 @@ import {
   setValue,
 } from './fill';
 import { overlay, type Mark } from './overlay';
+import { eventTarget } from './dom';
 import { expandSections } from './sections';
 
 const YES = /^(yes|y|true|i agree|i do|i am|i have|i will)\b/i;
@@ -49,7 +50,10 @@ const DATE_KEYS: ProfileKey[] = ['workStart', 'workEnd', 'eduStart', 'eduEnd'];
 const userEdited = new WeakSet<EventTarget>();
 let writing = 0;
 for (const type of ['input', 'change']) {
-  document.addEventListener(type, (e) => !writing && e.isTrusted && e.target && userEdited.add(e.target), true);
+  document.addEventListener(type, (e) => {
+    const t = eventTarget(e);
+    if (!writing && e.isTrusted && t) userEdited.add(t);
+  }, true);
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

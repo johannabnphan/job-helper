@@ -2,6 +2,7 @@
 // Job Helper never submits: every click goes through safeClick, which refuses
 // anything that could submit or advance the form.
 import { pickBestOption, type OptionPick } from '../shared/matcher';
+import { byIdNear, deepQueryAll, hostOf } from './dom';
 import { isVisible, text } from './fields';
 
 const SUBMIT_TEXT = /\b(submit|apply|send|finish|continue|next|save and continue|review application|done)\b/i;
@@ -17,7 +18,10 @@ export function couldSubmit(el: HTMLElement): boolean {
     if (type === 'submit') return true;
   }
   if (btn instanceof HTMLAnchorElement && btn.href && !btn.href.startsWith('javascript:') && !btn.getAttribute('href')?.startsWith('#')) return true;
-  return SUBMIT_TEXT.test(text(btn) || btn.getAttribute('aria-label') || '');
+  // A button inside a web component shows its host's slotted text ("Submit").
+  const host = btn.querySelector('slot') ? hostOf(btn) : null;
+  if (host && /submit/i.test(host.getAttribute('kind') ?? host.getAttribute('type') ?? '')) return true;
+  return SUBMIT_TEXT.test(text(btn) || (host ? text(host) : '') || btn.getAttribute('aria-label') || '');
 }
 
 export function safeClick(el: HTMLElement): boolean {
@@ -41,7 +45,8 @@ function nativeSetter(el: HTMLElement): ((v: string) => void) | undefined {
 }
 
 function fire(el: HTMLElement, ...types: string[]): void {
-  for (const t of types) el.dispatchEvent(new Event(t, { bubbles: true }));
+  // composed: let the event out of shadow roots so web components see it.
+  for (const t of types) el.dispatchEvent(new Event(t, { bubbles: true, composed: true }));
 }
 
 /** Sets a value the way a framework expects to see a user type it. */
@@ -52,7 +57,7 @@ export function setValue(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelect
   else el.value = value;
   fire(el, 'input', 'change');
   el.dispatchEvent(new FocusEvent('blur', { bubbles: false }));
-  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
 }
 
 export function hasValue(el: HTMLElement): boolean {
@@ -131,8 +136,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function visibleOptions(doc: Document, owner: HTMLElement): HTMLElement[] {
   const listId = owner.getAttribute('aria-controls') || owner.getAttribute('aria-owns');
-  const scope = (listId && doc.getElementById(listId)) || doc;
-  return [...scope.querySelectorAll<HTMLElement>('[role="option"], [id*="-option-"], .select__option')].filter(
+  const scope = (listId && byIdNear(owner, listId)) || doc;
+  return deepQueryAll<HTMLElement>(scope, '[role="option"], [id*="-option-"], .select__option').filter(
     (o) => isVisible(o) && !o.closest('[data-job-helper]'),
   );
 }

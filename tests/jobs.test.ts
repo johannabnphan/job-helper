@@ -28,3 +28,10 @@ describe('jobs', () => {
     expect(titleFromTab('Senior Engineer - Lever')).toBe('Senior Engineer');
   });
 });
+
+describe('SmartRecruiters URLs', () => {
+  it('reads the company from one-click apply links', () => {
+    expect(companyFromUrl('https://jobs.smartrecruiters.com/oneclick-ui/company/IntuitiveSurgical/publication/abc-123')).toBe('Intuitive Surgical');
+    expect(companyFromUrl('https://jobs.smartrecruiters.com/IntuitiveSurgical/744000-global-product-marketing')).toBe('Intuitive Surgical');
+  });
+});

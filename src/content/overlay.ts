@@ -132,8 +132,9 @@ class Overlay {
   /** A real (trusted) edit by the user on a flagged field clears its flag. */
   private onUserEdit = (e: Event) => {
     if (!e.isTrusted) return;
-    const target = e.target as Node;
-    const m = this.marks.find((x) => x.status !== 'filled' && (x.watch === target || x.anchor.contains(target)));
+    // composedPath() includes elements inside shadow roots (web-component forms).
+    const path = e.composedPath();
+    const m = this.marks.find((x) => x.status !== 'filled' && (path.includes(x.watch) || path.includes(x.anchor)));
     if (!m) return;
     m.status = 'filled';
     m.box.className = 'box filled';

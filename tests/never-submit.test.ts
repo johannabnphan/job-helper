@@ -34,3 +34,23 @@ describe('never submit', () => {
     expect(couldSubmit(el(html))).toBe(false);
   });
 });
+
+describe('never submit inside web components', () => {
+  it('refuses a shadow-DOM button whose slotted text says Submit', () => {
+    document.body.innerHTML = '<x-btn>Submit application</x-btn>';
+    const host = document.querySelector('x-btn')!;
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<button type="button"><slot></slot></button>';
+    const inner = root.querySelector('button')!;
+    expect(couldSubmit(inner)).toBe(true);
+    expect(safeClick(inner)).toBe(false);
+  });
+
+  it('allows a shadow-DOM "+ Add" button', () => {
+    document.body.innerHTML = '<x-btn>+ Add</x-btn>';
+    const host = document.querySelector('x-btn')!;
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<button type="button"><slot></slot></button>';
+    expect(couldSubmit(root.querySelector('button')!)).toBe(false);
+  });
+});
