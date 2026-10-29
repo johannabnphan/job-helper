@@ -33,7 +33,8 @@ const profile = {
 const answers = [
   { id: 'a1', question: 'How did you hear about us', keywords: ['hear about', 'how did you hear', 'source'], answer: 'LinkedIn' },
   { id: 'a2', question: 'Willing to relocate', keywords: ['relocate'], answer: 'Open to relocating for the right role.' },
-  { id: 'a3', question: 'Visa sponsorship', keywords: ['sponsorship'], answer: 'No' },
+  { id: 'a3', question: 'Visa sponsorship', keywords: ['sponsorship', 'visa'], answer: 'No', variants: ['Sponsorship not required', 'I do not require sponsorship'] },
+  { id: 'a4', question: 'Job source', keywords: [], phrasings: ['Where did you find this job posting?'], answer: 'LinkedIn' },
 ];
 const resume = { name: 'resume.pdf', type: 'application/pdf', base64: Buffer.from('%PDF-1.4 fake').toString('base64') };
 

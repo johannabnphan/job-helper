@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Careers - Apply (repeating sections fixture)</title>
+<style>body{font:14px system-ui;max-width:640px;margin:40px auto}label{display:block;margin:10px 0 4px}input:not([type=checkbox]):not([type=file]),select{width:100%;padding:6px}.block{border:1px solid #ccc;padding:8px;margin:8px 0}</style>
+</head>
+<body>
+<form id="apply" onsubmit="window.__submitted = true; return false;">
+  <label for="fn">First name</label><input id="fn">
+  <label for="em">Email</label><input id="em" type="email">
+  <label for="visa">Visa status</label>
+  <select id="visa"><option value="">Choose…</option><option>Sponsorship required</option><option>Sponsorship not required</option></select>
+  <label for="hear">Where did you find this job posting?</label><input id="hear">
+
+  <section id="exp"><h2>Work experience</h2><div class="blocks"></div>
+    <button type="button" id="add-exp">+ Add experience</button></section>
+  <section id="edu"><h2>Education</h2><div class="blocks"></div>
+    <button type="button" id="add-edu">Add education</button></section>
+
+  <label for="cv">Resume</label><input id="cv" type="file">
+  <button>Submit</button>
+</form>
+<template id="exp-t">
+  <div class="block">
+    <label>Company</label><input name="company">
+    <label>Job title</label><input name="title">
+    <label>Start month</label><select name="sm"><option value=""></option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select>
+    <label>Start year</label><select name="sy"><option value=""></option><option>2017</option><option>2018</option><option>2019</option><option>2020</option><option>2021</option></select>
+    <label>End date</label><input name="end" placeholder="MM/YYYY">
+    <label><input type="checkbox" name="cur"> I currently work here</label>
+  </div>
+</template>
+<template id="edu-t">
+  <div class="block"><label>School</label><input name="school"><label>Degree</label><input name="degree"></div>
+</template>
+<script>
+  // Blocks render asynchronously, like a React app.
+  const add = (sec, tpl) => setTimeout(() => document.querySelector(`#${sec} .blocks`).append(document.getElementById(tpl).content.cloneNode(true)), 250);
+  document.getElementById('add-exp').addEventListener('click', () => add('exp', 'exp-t'));
+  document.getElementById('add-edu').addEventListener('click', () => add('edu', 'edu-t'));
+  // The site's own "autofill from resume": after an upload it overwrites fields with bad guesses.
+  document.getElementById('cv').addEventListener('change', () => setTimeout(() => {
+    const set = (el, v) => { el.value = v; };
+    set(document.getElementById('fn'), 'ALEX R.');
+    set(document.getElementById('em'), '');
+    set(document.querySelector('#exp [name=title]'), 'Designer (parsed)');
+  }, 400));
+  const $ = (s) => document.querySelector(s);
+  const blocks = (s) => [...document.querySelectorAll(`#${s} .block`)];
+  window.__expect = () => {
+    const [a, b] = blocks('exp');
+    return {
+      'two job blocks added': blocks('exp').length === 2,
+      'one education block added': blocks('edu').length === 1,
+      'job 1 company/title': a?.querySelector('[name=company]').value === 'Northwind Labs' && a?.querySelector('[name=title]').value === 'Senior Product Designer',
+      'job 1 current, no end date': a?.querySelector('[name=cur]').checked === true && a?.querySelector('[name=end]').value === '',
+      'job 1 start month/year selects': a?.querySelector('[name=sm]').value === 'January' && a?.querySelector('[name=sy]').value === '2021',
+      'job 2 in order': b?.querySelector('[name=company]').value === 'Contoso Media',
+      'job 2 not current': b?.querySelector('[name=cur]').checked === false,
+      'job 2 end date MM/YYYY': b?.querySelector('[name=end]').value === '12/2020',
+      'school': blocks('edu')[0]?.querySelector('[name=school]').value === 'Rhode Island School of Design',
+      'site autofill corrected: first name': $('#fn').value === 'Alex',
+      'site autofill corrected: email': $('#em').value === 'alex.rivera@example.com',
+      'site autofill corrected: job title': a?.querySelector('[name=title]').value === 'Senior Product Designer',
+      'answer variant picks option': $('#visa').value === 'Sponsorship not required',
+      'answer matched by phrasing': $('#hear').value === 'LinkedIn',
+      'resume attached': $('#cv').files.length === 1,
+    };
+  };
+</script>
+</body>
+</html>

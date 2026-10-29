@@ -205,3 +205,12 @@ describe('answer variants and phrasings', () => {
     expect(pickOption(['Yes', 'No'], 'Yes')!.score).toBeGreaterThanOrEqual(WEAK_OPTION);
   });
 });
+
+describe('profile value that fits no option', () => {
+  it('falls back to the answer bank', () => {
+    const p = profile();
+    const answers = [{ id: 'v', question: 'Visa', keywords: ['visa'], answer: 'No', variants: ['Sponsorship not required'] }];
+    const r = resolveField(f('Visa status', 'select', { options: ['Sponsorship required', 'Sponsorship not required'] }), { profile: p, answers });
+    expect(isResolved(r) && r.variants).toContain('Sponsorship not required');
+  });
+});

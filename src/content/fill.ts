@@ -1,7 +1,7 @@
 // Low-level value setters that work with React/Angular/Vue-controlled inputs.
 // Job Helper never submits: every click goes through safeClick, which refuses
 // anything that could submit or advance the form.
-import { pickOption, type OptionPick } from '../shared/matcher';
+import { pickBestOption, type OptionPick } from '../shared/matcher';
 import { isVisible, text } from './fields';
 
 const SUBMIT_TEXT = /\b(submit|apply|send|finish|continue|next|save and continue|review application|done)\b/i;
@@ -65,16 +65,17 @@ export function hasValue(el: HTMLElement): boolean {
   return false;
 }
 
-export function setSelect(el: HTMLSelectElement, value: string): OptionPick | undefined {
+/** `wordings`: the value first, then alternate wordings (answer variants). */
+export function setSelect(el: HTMLSelectElement, wordings: string[]): OptionPick | undefined {
   const options = [...el.options];
-  const pick = pickOption(options.map((o) => o.text), value) ?? pickOption(options.map((o) => o.value), value);
+  const pick = pickBestOption(options.map((o) => o.text), wordings) ?? pickBestOption(options.map((o) => o.value), wordings);
   if (!pick) return undefined;
   setValue(el, options[pick.index].value);
   return pick;
 }
 
-export function setRadio(radios: HTMLInputElement[], labels: string[], value: string): OptionPick | undefined {
-  const pick = pickOption(labels, value);
+export function setRadio(radios: HTMLInputElement[], labels: string[], wordings: string[]): OptionPick | undefined {
+  const pick = pickBestOption(labels, wordings);
   if (!pick) return undefined;
   const radio = radios[pick.index];
   if (!radio.checked) {
@@ -98,8 +99,8 @@ export function setCheckbox(el: HTMLInputElement, checked: boolean): void {
   }
 }
 
-export function setButtonChoice(buttons: HTMLElement[], value: string): OptionPick | undefined {
-  const pick = pickOption(buttons.map((b) => text(b)), value);
+export function setButtonChoice(buttons: HTMLElement[], wordings: string[]): OptionPick | undefined {
+  const pick = pickBestOption(buttons.map((b) => text(b)), wordings);
   if (!pick) return undefined;
   const btn = buttons[pick.index];
   if (btn.getAttribute('aria-pressed') !== 'true' && !btn.className.match(/active|selected/)) {
@@ -157,14 +158,15 @@ function closeMenu(el: HTMLElement): void {
  * the site's own filtering may not match our wording ("BFA" vs "Bachelor's").
  * Returns undefined when no suitable option appears.
  */
-export async function setCombobox(el: HTMLElement, value: string): Promise<(OptionPick & { label: string }) | undefined> {
+export async function setCombobox(el: HTMLElement, wordings: string[]): Promise<(OptionPick & { label: string }) | undefined> {
+  const value = wordings[0];
   const doc = el.ownerDocument;
   const label = (o: HTMLElement) => text(o) || o.getAttribute('aria-label') || '';
 
   if (!(el instanceof HTMLInputElement)) {
     if (!safeClick(el)) return undefined;
     const options = await waitForOptions(doc, el);
-    const pick = options.length ? pickOption(options.map(label), value) : undefined;
+    const pick = options.length ? pickBestOption(options.map(label), wordings) : undefined;
     if (!pick) {
       closeMenu(el);
       return undefined;
@@ -187,7 +189,7 @@ export async function setCombobox(el: HTMLElement, value: string): Promise<(Opti
       el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, bubbles: true }));
       options = await waitForOptions(doc, el, 600);
     }
-    const pick = options.length ? pickOption(options.map(label), value) : undefined;
+    const pick = options.length ? pickBestOption(options.map(label), wordings) : undefined;
     if (pick) {
       const chosen = label(options[pick.index]);
       safeClick(options[pick.index]);
@@ -225,4 +227,42 @@ export function base64ToFile(b64: string, name: string, type: string): File {
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new File([bytes], name, { type });
+}
+
+export function isPressed(b: HTMLElement): boolean {
+  return b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-checked') === 'true' || /\b_?(active|selected)_?\b/i.test(b.className);
+}
+
+/**
+ * What the field currently shows, as text: the typed value, the chosen
+ * option's label, "yes"/"no" for checkboxes, the file name for uploads.
+ * Empty string means nothing is set.
+ */
+export function readValue(
+  kind: string,
+  el: HTMLElement,
+  choices?: HTMLElement[],
+  options?: string[],
+): string {
+  if (kind === 'radio' && choices) {
+    const i = (choices as HTMLInputElement[]).findIndex((r) => r.checked);
+    return i >= 0 ? (options?.[i] ?? (choices[i] as HTMLInputElement).value) : '';
+  }
+  if (choices) {
+    const b = choices.find(isPressed);
+    return b ? text(b) : '';
+  }
+  if (el instanceof HTMLSelectElement) return el.selectedIndex > 0 || el.value ? (el.selectedOptions[0]?.text.trim() ?? '') : '';
+  if (el instanceof HTMLInputElement && el.type === 'checkbox') return el.checked ? 'yes' : 'no';
+  if (el instanceof HTMLInputElement && el.type === 'file') return el.files?.[0]?.name ?? '';
+  if (kind === 'combobox') {
+    if (el instanceof HTMLInputElement) {
+      const control = el.closest('[class*="control" i], [class*="select" i]');
+      const single = control?.querySelector('[class*="single-value" i], [class*="singleValue" i], [class*="multi-value" i]');
+      return (single && text(single)) || el.value.trim();
+    }
+    const t = text(el);
+    return /^(select|choose|please select|--)/i.test(t) ? '' : t;
+  }
+  return (el as HTMLInputElement).value?.trim() ?? '';
 }

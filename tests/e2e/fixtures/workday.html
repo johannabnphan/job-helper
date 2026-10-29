@@ -54,12 +54,27 @@
   <button data-automation-id="bottom-navigation-next-button" onclick="window.__submitted = true">Save and Continue</button>
 </div>
 <script>
+  // "Add Another" clones the work-experience panel with a new Workday-style number.
+  document.querySelector('[aria-label="Add Work Experience"]').addEventListener('click', () => {
+    setTimeout(() => {
+      const panels = document.querySelectorAll('[data-automation-id^="workExperience-"]');
+      const last = panels[panels.length - 1];
+      const n = 7 + panels.length * 3;
+      const clone = last.cloneNode(true);
+      clone.setAttribute('data-automation-id', `workExperience-${n}`);
+      clone.querySelectorAll('[id]').forEach((e) => (e.id = e.id.replace(/workExperience-\d+/, `workExperience-${n}`)));
+      clone.querySelectorAll('[for]').forEach((e) => e.setAttribute('for', e.getAttribute('for').replace(/workExperience-\d+/, `workExperience-${n}`)));
+      clone.querySelectorAll('input, textarea').forEach((e) => (e.type === 'checkbox' ? (e.checked = false) : (e.value = '')));
+      last.after(clone);
+    }, 300);
+  });
   fakeListboxButton(document.querySelector('[data-automation-id=sourceDropdown]'), ['Job Board', 'LinkedIn', 'Referral']);
   fakeListboxButton(document.getElementById('country--country'), ['Canada', 'United States of America']);
   fakeListboxButton(document.getElementById('address--countryRegion'), ['New Jersey', 'New York']);
   fakeListboxButton(document.getElementById('phoneNumber--phoneType'), ['Mobile', 'Home']);
   fakeListboxButton(document.getElementById('education-3--degree'), ['High School', 'Bachelors', 'Masters']);
   const $ = (s) => document.querySelector(s);
+  const job2 = (f) => document.querySelectorAll('[data-automation-id^="workExperience-"]')[1]?.querySelector(`[id$="--${f}"]`);
   window.__expect = () => ({
     'source via answer bank': $('[data-automation-id=sourceDropdown]').textContent === 'LinkedIn',
     'country': $('#country--country').textContent === 'United States of America',
@@ -79,6 +94,11 @@
     'degree': $('#education-3--degree').textContent === 'Bachelors',
     'resume attached': $('[data-automation-id=file-upload-input-ref]').files.length === 1,
     'linkedin': $('#linkedin').value.includes('linkedin'),
+    'second job block added': document.querySelectorAll('[data-automation-id^="workExperience-"]').length === 2,
+    'first job current': $('#workExperience-7--currentlyWorkHere').checked === true,
+    'second job filled': job2('jobTitle')?.value === 'Product Designer' && job2('companyName')?.value === 'Contoso Media',
+    'second job not current': job2('currentlyWorkHere')?.checked === false,
+    'second job start month/year': job2('startDate-dateSectionMonth-input')?.value === '06' && job2('startDate-dateSectionYear-input')?.value === '2018',
   });
 </script>
 </body>

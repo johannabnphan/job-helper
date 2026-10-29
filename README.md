@@ -13,23 +13,41 @@ network calls.
 - **Profile** (options page): contact info, address, links (LinkedIn, portfolio, GitHub), work
   history, education, skills, work authorization, salary range, start date, and optional
   self-identification answers.
-- **Resume upload and import**: the resume file is saved locally and attached to resume
-  upload fields. *Import into profile* reads a PDF or text resume, prefills the profile and
-  highlights the imported fields so you can correct them before saving.
+- **Resume upload and import**: *Import into profile* parses a PDF or text resume into
+  structured data (contact info, links, jobs, education, skills) and highlights what it
+  imported. You correct it once, and every application reuses it. The file itself is saved
+  locally and attached to resume upload fields.
 - **Answer bank**: reusable answers to common questions (sponsorship, relocation, notice
-  period, how you heard about the role, …). Each answer has keywords. A form question that
-  contains a keyword gets that answer. Word forms count, so "relocate" also matches
-  "relocating".
+  period, how you heard about the role, …). Each answer has:
+  - **keywords**: a question containing one gets the answer. Word forms count, so
+    "relocate" also matches "relocating".
+  - **other ways the question is asked**: matched by similar wording. Close matches fill
+    normally, and loose ones fill but are flagged.
+  - **other ways to say the answer**: tried against dropdown and radio options. The
+    closest option is picked, and weak picks are flagged.
 - **Job links** (side panel): paste job URLs, track status (To apply, Filled, Applied), and
   open each one. Duplicates are detected, the company is inferred from the URL, and the
   title is picked up when you open the page.
 - **Autofill**: *Fill this page* in the side panel, or `Alt+Shift+F`. Fills text, dropdown,
   radio, checkbox, file-upload and custom combobox fields. A generic label matcher works on
-  any site, with adapters for **Greenhouse, Lever, Ashby and Workday**. Fields that already
-  have a value are left alone.
+  any site, with adapters for **Greenhouse, Lever, Ashby and Workday**.
+  - **Fills everything itself.** It never uses a site's "autofill with resume" button. The
+    resume is attached *last*, and anything the site's parser changes afterwards is corrected.
+  - **Repeating sections.** When the form has "Add experience" or "Add education", Job
+    Helper counts your entries, clicks Add until the form has one block per entry (waiting
+    for each to appear), and fills them in order. It ticks "I currently work here" for your
+    current role and leaves its end date empty. Month/year dropdowns, Workday month/year
+    boxes, `month`/`date` inputs and text boxes with an `MM/YYYY`-style placeholder are all
+    handled.
+  - **Self-check pass.** After filling, it re-reads every field and compares it with your
+    profile. Anything wrong, empty or changed by the site is set again. Anything still
+    wrong is flagged. Values that were already there (from the site or browser autofill)
+    are replaced with your profile's values and flagged so you can see what changed.
+    Fields *you* edited on the page are never overwritten.
 - **Review highlights**: green = filled, amber = filled but check it (open-ended answers,
-  closest-option picks, optional unknown fields), red = needs you (no confident match,
-  open-ended questions, missing profile data). A card on the page counts them and has a
+  closest-option picks, loose answer matches, replaced values, optional unknown fields),
+  red = needs you (no confident match, open-ended questions, missing profile data, fields
+  the self-check couldn't fix). A card on the page counts them and has a
   *Next flagged field* button. Editing a flagged field clears its flag.
 
 ### Never submits
@@ -78,8 +96,9 @@ card in `chrome://extensions`. Reload any open application tabs too.
    yourself. Set the job's status to **Applied**.
 
 Workday splits the application into steps. Click **Fill this page** on each step, then
-click Save and Continue yourself. If your profile has more jobs or schools than the page
-shows, Job Helper flags the **Add** button. Click it, then fill again.
+click Save and Continue yourself. Job Helper adds Work Experience and Education blocks
+itself. If a block doesn't appear, it flags the **Add** button so you can click it and fill
+again.
 
 ## Develop
 
@@ -99,7 +118,8 @@ src/background/              service worker: side panel, shortcut, job titles
 src/sidepanel/               job list + "Fill this page"
 src/options/                 profile, resume import, answer bank, backup
 src/content/                 injected into the application page
-  engine.ts                  find fields → resolve → fill → highlight
+  engine.ts                  expand sections → fill (resume last) → settle → self-check → highlight
+  sections.ts                "Add experience/education" handling
   fields.ts                  field discovery and question-label extraction
   fill.ts                    value setters, combobox handling, safeClick
   overlay.ts                 shadow-DOM highlights and summary card

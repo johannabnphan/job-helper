@@ -131,7 +131,7 @@ function kindOf(el: HTMLElement): FieldKind | undefined {
 const SECTION_HEADING = 'h1, h2, h3, h4, h5, legend, [role="heading"], [class*="heading" i], [class*="section-title" i]';
 
 /** Work/education context from the nearest section heading above the field. */
-function sectionOf(el: HTMLElement): 'work' | 'education' | undefined {
+export function sectionOf(el: HTMLElement): 'work' | 'education' | undefined {
   let node: HTMLElement | null = el.parentElement;
   for (let depth = 0; depth < 8 && node; depth++, node = node.parentElement) {
     const prev = node.previousElementSibling;

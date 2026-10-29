@@ -665,9 +665,16 @@ export function resolveField(field: FieldDescriptor, ctx: ResolveContext): Resol
     return { reason: key === 'resume' ? 'Resume upload' : 'Cover letter: attach or write one yourself', key, openEnded: false };
   }
 
+  let profileMisfit: Resolution | undefined;
   if (key && !openEnded) {
     const value = profileValue(key, ctx.profile, ctx.index ?? 0, field.kind);
-    if (value !== undefined) return { value, key, confidence: 'high', source: `From profile: ${humanize(key)}` };
+    if (value !== undefined) {
+      const res: Resolution = { value, key, confidence: 'high', source: `From profile: ${humanize(key)}` };
+      // A profile value that fits none of the options (e.g. status "US citizen" for a
+      // "Sponsorship required / not required" dropdown): let the answer bank try first.
+      if (!field.options?.length || pickOption(field.options, value)) return res;
+      profileMisfit = res;
+    }
   }
 
   const found = findAnswer(field.label, ctx.answers);
@@ -685,6 +692,8 @@ export function resolveField(field: FieldDescriptor, ctx: ResolveContext): Resol
           : undefined,
     };
   }
+
+  if (profileMisfit) return profileMisfit;
 
   if (key && openEnded) {
     // e.g. a "Skills" textarea; fill but ask for review.

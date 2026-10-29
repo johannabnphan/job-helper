@@ -92,25 +92,4 @@ export const workday: Adapter = {
     for (const [re, key] of RULES) if (re.test(all)) return { ...where, hint: key };
     return Object.keys(where).length ? where : undefined;
   },
-  notes(doc, payload) {
-    const out: Array<{ anchor: HTMLElement; message: string }> = [];
-    const sections: Array<['workExperience' | 'education', number, string]> = [
-      ['workExperience', payload.profile.work.length, 'Work Experience'],
-      ['education', payload.profile.education.length, 'Education'],
-    ];
-    for (const [kind, want, title] of sections) {
-      const panels = new Set<string>();
-      doc.querySelectorAll<HTMLElement>(`[data-automation-id^="${kind}-"], [id^="${kind}-"]`).forEach((n) => {
-        const m = `${n.id} ${n.getAttribute('data-automation-id') ?? ''}`.match(new RegExp(`\\b${kind}-(\\d+)`));
-        if (m) panels.add(m[0]);
-      });
-      const add = [...doc.querySelectorAll<HTMLElement>('button[data-automation-id="add-button"], button')].find((b) =>
-        new RegExp(`add.*${title}|${title}.*add`, 'i').test(`${b.getAttribute('aria-label') ?? ''} ${text(b.closest('[role="group"], section, fieldset') ?? b)}`),
-      );
-      if (add && want > panels.size) {
-        out.push({ anchor: add, message: `Click Add for ${want - panels.size} more ${title} entr${want - panels.size > 1 ? 'ies' : 'y'}, then Fill again` });
-      }
-    }
-    return out;
-  },
 };
