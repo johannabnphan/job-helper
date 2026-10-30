@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Job Helper",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Fills repetitive job application fields from your local profile. You review and click Submit yourself.",
   "minimum_chrome_version": "120",
   "icons": {
@@ -20,7 +20,7 @@
   "side_panel": {
     "default_path": "src/sidepanel/index.html"
   },
-  "options_page": "src/options/index.html",
+  "options_page": "src/app/index.html",
   "background": {
     "service_worker": "service-worker.js",
     "type": "module"

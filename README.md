@@ -8,6 +8,31 @@ All personal data stays on your machine. Your profile, answer bank and job list 
 `chrome.storage.local`, and your resume file is stored in IndexedDB. There is no backend and no
 network calls.
 
+## The app
+
+Click **Open app** in the side panel (or right-click the icon → Options). The app opens in a
+tab and is designed for people who find job hunting hard to start, including people with
+ADHD: one clear next action per screen, calm colours, no guilt.
+
+| Section | What it does |
+| --- | --- |
+| **Dashboard** | A greeting; today's goal (adjustable) with an energy check-in; one big **Start Applying** button; **Resume Application** for anything left part-way; up to 3 recommended jobs; a short overview (applied, interviews, what's due this week); the companion; achievements. |
+| **Find Jobs** | Real, current openings from the job boards of companies you choose (Greenhouse, Lever, Ashby public APIs), shown one at a time with key requirements, why it might fit, what's worth checking, and **Apply / Save / Skip**. Salary only when the posting lists it, and no invented match scores. |
+| **My Applications** | A simple tracker: Saved, In progress, Applied, Assessment, Interview, Offer, Rejected. Search, filter, next action, deadline, follow-up reminder, notes. |
+| **Focus Mode** | Full screen, one job, one next step: open and autofill → review and submit on the site → **I submitted it**. Optional calm timer (5/10/15/25 min) with pause, resume and stop. Leaving saves your place. |
+| **Settings** | Profile and resume, preferences (daily goal, XP/badges on or off, animations, companion personality, reminders), answer bank, AI, data and privacy. |
+
+First run shows a 5-step onboarding (roles, location, resume, skills, optional daily goal);
+every step can be skipped.
+
+**Companion.** Short, scripted guidance in your chosen personality (Encouraging,
+Straightforward, Quiet or Playful), "I'm stuck" tiny steps and a break option. Free-form
+chat uses Claude only when you've added an API key; otherwise it says so plainly.
+
+**Gamification (optional).** XP for real progress (+10 reviewing a job, +50 sending an
+application, +20 a focus session, +30 finishing one you'd paused, +25 a mission),
+levels, and badges you can't lose. Turn it all off in Settings → Preferences.
+
 ## Features
 
 - **Profile** (options page): contact info, address, links (LinkedIn, portfolio, GitHub), work
@@ -111,7 +136,7 @@ card in `chrome://extensions`. Reload any open application tabs too.
 
 ## Use it
 
-1. Open the side panel and click **Profile** (or right-click the icon → Options).
+1. Open the app (side panel → **Open app**) and go through onboarding, or go to Settings → **Profile and resume**.
    Upload your resume, click **Import into profile**, fix anything the import got wrong, and
    click **Save profile**. Fill in work authorization, salary and start date.
 2. Open **Answer bank** and write your answers. For Yes/No questions and dropdowns, start
@@ -183,10 +208,17 @@ profile keys (`describe`), finds better labels (`label`), or exposes custom widg
   files and API keys. Never commit personal data to this repo. Test fixtures use fictional
   people only.
 
-## Roadmap (Phase 2, not built yet)
+## What's built vs. what needs more
 
-1. A suggested-roles feed built from public ATS job boards only (Greenhouse, Lever and
-   Ashby public posting APIs).
-2. Claude-drafted answers for open-ended questions, using your resume plus the company's
-   mission and the job page. Drafts will always be flagged for review, and the API key will
-   be stored locally, never in the repo.
+Built and working: everything above, all local to your browser.
+
+Needs extra services or isn't built yet:
+- **Submitting for you.** By design Job Helper never submits. You click Submit on the
+  site, then **I submitted it** (no site offers a safe API for this).
+- **More job sources.** Find Jobs reads Greenhouse, Lever and Ashby public boards for
+  companies you add. Aggregated search (LinkedIn, Indeed) needs partner APIs.
+- **AI chat and drafts** need your own Anthropic API key (Settings → AI).
+- **Reminders outside the app** (system notifications) aren't on yet. Follow-ups show on
+  the dashboard.
+- **Accounts, sync across devices, body doubling and accountability partners** need a
+  backend, which this project deliberately doesn't have yet. Data stays in one browser.

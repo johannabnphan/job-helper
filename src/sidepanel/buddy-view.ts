@@ -13,7 +13,7 @@ import {
   type NextStep,
 } from '../shared/buddy';
 import { findJob } from '../shared/jobs';
-import { getBuddy, getJobs, getProfile, recordActivity, saveBuddy } from '../shared/storage';
+import { getBuddy, getJobs, getPrefs, getProfile, recordActivity, saveBuddy } from '../shared/storage';
 import { h } from '../shared/ui';
 
 export interface BuddyActions {
@@ -49,10 +49,10 @@ export async function settleFocus(): Promise<void> {
 
 export async function buddyCard(tabUrl: string | undefined, actions: BuddyActions): Promise<HTMLElement> {
   await settleFocus();
-  const [state, jobs, profile] = await Promise.all([getBuddy(), getJobs(), getProfile()]);
+  const [state, jobs, profile, prefs] = await Promise.all([getBuddy(), getJobs(), getProfile(), getPrefs()]);
   const day = dayKey();
   const energy = state.energy?.date === day ? state.energy.level : undefined;
-  const missions = dailyMissions(day, energy ?? 'medium', state.activity);
+  const missions = dailyMissions(day, energy ?? 'medium', state.activity, prefs.dailyGoal);
   const { level, into, needed } = levelInfo(state.xp);
   const currentJob = tabUrl ? findJob(jobs, tabUrl) : undefined;
   const step = nextStep({ profileReady: Boolean(profile.firstName && profile.email), jobs, currentJob, allMissionsDone: missions.every((m) => m.done) });
@@ -92,15 +92,15 @@ export async function buddyCard(tabUrl: string | undefined, actions: BuddyAction
       h(
         'div',
         { style: 'flex:1;min-width:0' },
-        h('div', { class: 'row' }, h('h2', {}, 'Buddy'), h('span', { class: 'spacer' }), h('span', { class: 'small muted' }, `Level ${level} · ${state.xp} XP`)),
-        h('div', { class: 'xpbar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': needed, 'aria-valuenow': into, title: `${needed - into} XP to level ${level + 1}` }, h('div', { style: `width:${Math.round((into / needed) * 100)}%` })),
+        h('div', { class: 'row' }, h('h2', {}, 'Buddy'), h('span', { class: 'spacer' }), prefs.gamification ? h('span', { class: 'small muted' }, `Level ${level} · ${state.xp} XP`) : null),
+        !prefs.gamification ? null : h('div', { class: 'xpbar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': needed, 'aria-valuenow': into, title: `${needed - into} XP to level ${level + 1}` }, h('div', { style: `width:${Math.round((into / needed) * 100)}%` })),
       ),
     ),
     h('p', { class: 'buddy-say' }, greeting(day, energy)),
     energyPicker,
     missionsView(missions),
     h('p', { class: 'small', style: 'margin:0;font-weight:600' }, encouragement(missions)),
-    nextStepView(step, actions),
+    nextStepView(step, actions, prefs.gamification),
     focusView(state.focus),
     week ? h('div', { class: 'muted small' }, `You showed up ${week} of the last 7 days 💛`) : null,
   );
@@ -127,7 +127,7 @@ function missionsView(missions: ReturnType<typeof dailyMissions>): HTMLElement {
   );
 }
 
-function nextStepView(step: NextStep, actions: BuddyActions): HTMLElement {
+function nextStepView(step: NextStep, actions: BuddyActions, showXp: boolean): HTMLElement {
   const run = async () => {
     switch (step.action) {
       case 'profile':
@@ -146,7 +146,7 @@ function nextStepView(step: NextStep, actions: BuddyActions): HTMLElement {
   return h(
     'div',
     { class: 'nextstep stack', style: 'gap:6px' },
-    h('div', { class: 'row' }, h('span', { class: 'small muted' }, 'Your next step'), h('span', { class: 'spacer' }), step.xp ? h('span', { class: 'xp' }, `+${step.xp} XP`) : null),
+    h('div', { class: 'row' }, h('span', { class: 'small muted' }, 'Your next step'), h('span', { class: 'spacer' }), step.xp && showXp ? h('span', { class: 'xp' }, `+${step.xp} XP`) : null),
     h('strong', {}, step.title),
     h('div', { class: 'small muted' }, step.detail),
     h('button', { class: 'primary', onclick: run }, step.button),
@@ -165,7 +165,7 @@ function focusView(focus: { endsAt: number; minutes: number } | undefined): HTML
       'div',
       { class: 'row wrap small', style: 'gap:6px' },
       h('span', { class: 'muted' }, 'Focus session:'),
-      [10, 15, 25].map((m) => h('button', { class: 'icon', onclick: () => start(m) }, `${m} min`)),
+      [5, 10, 15, 25].map((m) => h('button', { class: 'icon', onclick: () => start(m) }, `${m} min`)),
     );
   }
   const clock = h('strong', { class: 'clock' }, mmss(focus.endsAt - Date.now()));

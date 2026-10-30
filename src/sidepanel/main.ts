@@ -4,7 +4,7 @@ import { clearHighlights, fillTab, type TabFillResult } from '../shared/fill-tab
 import { addUrls, atsName, extractUrls, STATUS_LABELS } from '../shared/jobs';
 import { setStatus } from '../shared/applications';
 import { cheer } from '../shared/buddy';
-import { getBuddy, getJobs, getProfile, onStorageChange, recordActivity, saveJobs } from '../shared/storage';
+import { getBuddy, getJobs, getPrefs, getProfile, onStorageChange, recordActivity, saveJobs } from '../shared/storage';
 import { buddyCard, type BuddyActions } from './buddy-view';
 import type { Job, JobStatus } from '../shared/types';
 import { h, toast } from '../shared/ui';
@@ -13,8 +13,10 @@ const app = document.getElementById('app')!;
 let filter: JobStatus | 'all' = 'saved';
 let lastResult: { url: string; result: TabFillResult } | undefined;
 
+/** Opens a Settings section in the full app ('#profile' -> #settings/profile). */
 function openOptions(hash = ''): void {
-  chrome.tabs.create({ url: chrome.runtime.getURL(`src/options/index.html${hash}`) });
+  const section = hash.replace(/^#(settings\/)?/, '');
+  chrome.tabs.create({ url: chrome.runtime.getURL(`src/app/index.html#settings${section ? `/${section}` : ''}`) });
 }
 
 async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
@@ -217,8 +219,8 @@ const buddyActions: BuddyActions = {
 /** "+50 XP · Nice work!" pop when Buddy's XP goes up. */
 let lastXp: number | undefined;
 async function celebrate(): Promise<void> {
-  const { xp } = await getBuddy();
-  if (lastXp !== undefined && xp > lastXp) {
+  const [{ xp }, prefs] = await Promise.all([getBuddy(), getPrefs()]);
+  if (prefs.gamification && lastXp !== undefined && xp > lastXp) {
     const pop = h('div', { class: 'xp-pop', role: 'status' }, `+${xp - lastXp} XP · ${cheer(xp)}`);
     document.body.append(pop);
     setTimeout(() => pop.remove(), 2400);
@@ -236,8 +238,8 @@ async function render(): Promise<void> {
       h('img', { src: '../../icons/icon32.png', width: 20, height: 20, alt: '' }),
       h('h1', {}, 'Job Helper'),
       h('span', { class: 'spacer' }),
-      h('button', { class: 'icon', onclick: () => openOptions('#answers') }, 'Answers'),
-      h('button', { class: 'icon', onclick: () => openOptions('#profile') }, 'Profile'),
+      h('button', { class: 'icon primary', onclick: () => chrome.tabs.create({ url: chrome.runtime.getURL('src/app/index.html#dashboard') }) }, 'Open app'),
+      h('button', { class: 'icon', onclick: () => openOptions('#settings/profile') }, 'Profile'),
     ),
     h('main', { class: 'stack' }, buddy, page, jobs),
   );
