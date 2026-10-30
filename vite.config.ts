@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         sidepanel: resolve(import.meta.dirname, 'src/sidepanel/index.html'),
         options: resolve(import.meta.dirname, 'src/options/index.html'),
+        app: resolve(import.meta.dirname, 'src/app/index.html'),
         'service-worker': resolve(import.meta.dirname, 'src/background/service-worker.ts'),
       },
       output: {

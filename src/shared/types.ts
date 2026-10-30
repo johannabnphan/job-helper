@@ -109,6 +109,8 @@ export interface Job {
   /** Save and resume: fields still flagged after the last fill, and when. */
   remaining?: number;
   lastFilledAt?: number;
+  /** Why it was recommended (from Find Jobs), in plain words. */
+  why?: string;
 }
 
 export interface StoredResume {

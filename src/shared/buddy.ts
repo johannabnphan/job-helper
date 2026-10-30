@@ -19,7 +19,9 @@ export interface BuddyState {
   activity: Activity[];
   /** Energy picked today ("YYYY-MM-DD" local date). */
   energy?: { date: string; level: Energy };
-  focus?: { startedAt: number; endsAt: number; minutes: number };
+  focus?: { startedAt: number; endsAt: number; minutes: number; pausedLeft?: number };
+  /** Job being worked on in Focus Mode, so a session can be resumed. */
+  focusJobId?: string;
 }
 
 export const XP: Record<ActivityType, number> = {
