@@ -2,7 +2,9 @@ import '../shared/ui.css';
 import './sidepanel.css';
 import { clearHighlights, fillTab, type TabFillResult } from '../shared/fill-tab';
 import { addUrls, atsName, extractUrls, STATUS_LABELS } from '../shared/jobs';
-import { getJobs, getProfile, onStorageChange, saveJobs } from '../shared/storage';
+import { cheer } from '../shared/buddy';
+import { getBuddy, getJobs, getProfile, onStorageChange, recordActivity, saveJobs } from '../shared/storage';
+import { buddyCard, type BuddyActions } from './buddy-view';
 import type { Job, JobStatus } from '../shared/types';
 import { h, toast } from '../shared/ui';
 
@@ -22,6 +24,23 @@ async function activeTab(): Promise<chrome.tabs.Tab | undefined> {
 // ---------------------------------------------------------------------------
 // "This page" card
 
+async function fillCurrentPage(): Promise<void> {
+  const t = await activeTab();
+  if (!t) return;
+  document.querySelectorAll<HTMLButtonElement>('[data-fill]').forEach((b) => {
+    b.disabled = true;
+    b.textContent = 'Filling…';
+  });
+  try {
+    lastResult = { url: t.url ?? '', result: await fillTab(t) };
+    const { filled, review, missing } = lastResult.result.counts;
+    if (!filled && !review && !missing) toast('No application form found on this page.', 'error');
+  } catch (err) {
+    toast(err instanceof Error ? err.message : String(err), 'error');
+  }
+  await render();
+}
+
 async function pageCard(): Promise<HTMLElement> {
   const tab = await activeTab();
   const profile = await getProfile();
@@ -29,21 +48,8 @@ async function pageCard(): Promise<HTMLElement> {
   const host = tab?.url ? (() => { try { return new URL(tab.url).hostname; } catch { return ''; } })() : '';
   const ats = tab?.url ? atsName(tab.url) : undefined;
 
-  const fillBtn = h('button', { class: 'primary', disabled: !tab?.id }, 'Fill this page');
-  fillBtn.addEventListener('click', async () => {
-    const t = await activeTab();
-    if (!t) return;
-    fillBtn.disabled = true;
-    fillBtn.textContent = 'Filling…';
-    try {
-      lastResult = { url: t.url ?? '', result: await fillTab(t) };
-      const { filled, review, missing } = lastResult.result.counts;
-      if (!filled && !review && !missing) toast('No application form found on this page.', 'error');
-    } catch (err) {
-      toast(err instanceof Error ? err.message : String(err), 'error');
-    }
-    await render();
-  });
+  const fillBtn = h('button', { class: 'primary', disabled: !tab?.id, 'data-fill': '' }, 'Fill this page');
+  fillBtn.addEventListener('click', () => fillCurrentPage());
 
   const result = lastResult && lastResult.url === tab?.url ? lastResult.result : undefined;
   return h(
@@ -98,7 +104,11 @@ function jobRow(job: Job, jobs: Job[]): HTMLElement {
   };
   const status = h(
     'select',
-    { class: `status ${job.status}`, onchange: (e: Event) => save((j) => (j.status = (e.target as HTMLSelectElement).value as JobStatus)) },
+    { class: `status ${job.status}`, onchange: async (e: Event) => {
+        const status = (e.target as HTMLSelectElement).value as JobStatus;
+        await save((j) => (j.status = status));
+        if (status === 'applied') await recordActivity('applied', job.id);
+      } },
     (Object.keys(STATUS_LABELS) as JobStatus[]).map((s) => h('option', { value: s, selected: s === job.status }, STATUS_LABELS[s])),
   );
   let path = job.url;
@@ -124,12 +134,13 @@ function jobRow(job: Job, jobs: Job[]): HTMLElement {
 
 async function jobsCard(): Promise<HTMLElement> {
   const jobs = await getJobs();
-  const input = h('textarea', { rows: 2, placeholder: 'Paste job links, one per line' });
+  const input = h('textarea', { rows: 2, placeholder: 'Paste job links, one per line', id: 'links-input' });
   const add = async () => {
     const urls = extractUrls(input.value);
     if (!urls.length) return toast('No links found. Paste full https:// URLs.', 'error');
     const res = addUrls(jobs, urls);
     await saveJobs(res.jobs);
+    for (const j of res.jobs.slice(0, res.added)) await recordActivity('job_added', j.id);
     input.value = '';
     toast(res.added ? `Added ${res.added} job${res.added > 1 ? 's' : ''}` : 'Already in your list');
   };
@@ -161,8 +172,41 @@ async function jobsCard(): Promise<HTMLElement> {
 
 // ---------------------------------------------------------------------------
 
+const buddyActions: BuddyActions = {
+  openProfile: () => openOptions('#profile'),
+  fillPage: () => void fillCurrentPage(),
+  openJob: (url) => void chrome.tabs.create({ url }),
+  focusAddLinks: () => {
+    const el = document.getElementById('links-input');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.focus();
+  },
+  markApplied: async (jobId) => {
+    const jobs = await getJobs();
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    job.status = 'applied';
+    job.updatedAt = Date.now();
+    await saveJobs(jobs);
+    await recordActivity('applied', job.id);
+  },
+};
+
+/** "+50 XP · Nice work!" pop when Buddy's XP goes up. */
+let lastXp: number | undefined;
+async function celebrate(): Promise<void> {
+  const { xp } = await getBuddy();
+  if (lastXp !== undefined && xp > lastXp) {
+    const pop = h('div', { class: 'xp-pop', role: 'status' }, `+${xp - lastXp} XP · ${cheer(xp)}`);
+    document.body.append(pop);
+    setTimeout(() => pop.remove(), 2400);
+  }
+  lastXp = xp;
+}
+
 async function render(): Promise<void> {
-  const [page, jobs] = await Promise.all([pageCard(), jobsCard()]);
+  const tab = await activeTab();
+  const [buddy, page, jobs] = await Promise.all([buddyCard(tab?.url, buddyActions), pageCard(), jobsCard()]);
   app.replaceChildren(
     h(
       'header',
@@ -173,11 +217,15 @@ async function render(): Promise<void> {
       h('button', { class: 'icon', onclick: () => openOptions('#answers') }, 'Answers'),
       h('button', { class: 'icon', onclick: () => openOptions('#profile') }, 'Profile'),
     ),
-    h('main', { class: 'stack' }, page, jobs),
+    h('main', { class: 'stack' }, buddy, page, jobs),
   );
 }
 
-onStorageChange(['jobs', 'profile'], () => void render());
+onStorageChange(['jobs', 'profile', 'buddy'], () => {
+  void celebrate();
+  void render();
+});
+void celebrate();
 chrome.tabs.onActivated.addListener(() => void render());
 chrome.tabs.onUpdated.addListener((_id, info) => {
   if (info.status === 'complete' || info.title) void render();

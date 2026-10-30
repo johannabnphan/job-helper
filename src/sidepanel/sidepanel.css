@@ -26,3 +26,28 @@ select.status { width: auto; font-size: 12px; padding: 3px 4px; }
 select.status.filled { border-color: #f59e0b; }
 select.status.applied { border-color: #16a34a; }
 button.icon { font-size: 12px; padding: 3px 8px; }
+
+/* Buddy */
+.buddy { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.buddy-face { font-size: 34px; line-height: 1; width: 44px; text-align: center; }
+.buddy-say { margin: 0; font-size: 15px; font-weight: 600; }
+.xpbar { height: 6px; border-radius: 999px; background: var(--bg); overflow: hidden; margin-top: 6px; }
+.xpbar > div { height: 100%; background: linear-gradient(90deg, #f59e0b, #22c55e); border-radius: 999px; transition: width .6s ease; }
+.energy { display: flex; gap: 6px; }
+.energy button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; }
+.energy-icon { font-size: 20px; }
+.missions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.missions li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; background: var(--bg); font-size: 13px; }
+.missions .check { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; font-size: 11px; color: #fff; }
+.missions li.done .check { background: #22c55e; border-color: #22c55e; }
+.missions li.done .mtext { text-decoration: line-through; color: var(--muted); }
+.missions .mtext { flex: 1; }
+.nextstep { padding: 10px; border-radius: 8px; background: var(--bg); border: 1px dashed var(--border); }
+.nextstep button { align-self: flex-start; }
+.xp { font-size: 11px; font-weight: 700; color: #b45309; background: #fef3c7; padding: 1px 8px; border-radius: 999px; }
+.focus { padding: 8px 10px; border-radius: 8px; background: var(--imported); }
+.clock { font-variant-numeric: tabular-nums; font-size: 16px; }
+.xp-pop { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: #16a34a; color: #fff; font-weight: 700;
+  padding: 8px 14px; border-radius: 999px; z-index: 20; animation: pop 2.4s ease forwards; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 20% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .xp-pop { animation: none; } .xpbar > div { transition: none; } }

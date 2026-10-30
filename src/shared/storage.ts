@@ -1,8 +1,9 @@
 // Thin typed wrapper over chrome.storage.local. Nothing here leaves the browser.
 import { defaultAnswers, emptyProfile } from './defaults';
+import { applyActivity, emptyBuddy, type ActivityType, type BuddyState, type RecordResult } from './buddy';
 import type { Answer, Job, Profile } from './types';
 
-const KEYS = { profile: 'profile', answers: 'answers', jobs: 'jobs' } as const;
+const KEYS = { profile: 'profile', answers: 'answers', jobs: 'jobs', buddy: 'buddy' } as const;
 
 async function get<T>(key: string): Promise<T | undefined> {
   const res = await chrome.storage.local.get(key);
@@ -53,6 +54,21 @@ export async function getJobs(): Promise<Job[]> {
 
 export function saveJobs(jobs: Job[]): Promise<void> {
   return set(KEYS.jobs, jobs);
+}
+
+export async function getBuddy(): Promise<BuddyState> {
+  return { ...emptyBuddy(), ...((await get<BuddyState>(KEYS.buddy)) ?? {}) };
+}
+
+export function saveBuddy(state: BuddyState): Promise<void> {
+  return set(KEYS.buddy, state);
+}
+
+/** Logs real progress for Buddy (XP, missions). Safe to call twice for the same job. */
+export async function recordActivity(type: Exclude<ActivityType, 'mission_done'>, ref?: string): Promise<RecordResult> {
+  const result = applyActivity(await getBuddy(), type, ref);
+  if (result.gained) await saveBuddy(result.state);
+  return result;
 }
 
 /** Calls `cb` whenever one of the given keys changes (from any extension page). */

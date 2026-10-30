@@ -4,7 +4,7 @@
 import { addUrls, findJob, titleFromTab } from './jobs';
 import type { FillPayload, FillReport } from './messages';
 import { getResume } from './resume-store';
-import { getAnswers, getJobs, getProfile, saveJobs } from './storage';
+import { getAnswers, getJobs, getProfile, recordActivity, saveJobs } from './storage';
 
 async function blobToBase64(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -45,6 +45,7 @@ export async function fillTab(tab: chrome.tabs.Tab): Promise<TabFillResult> {
     if (!findJob(jobs, tab.url)) jobs = addUrls(jobs, [tab.url]).jobs;
     const job = findJob(jobs, tab.url)!;
     if (job.status === 'to_apply') job.status = 'filled';
+    await recordActivity('filled', job.id);
     if (!job.title && tab.title) job.title = titleFromTab(tab.title);
     job.updatedAt = Date.now();
     await saveJobs(jobs);

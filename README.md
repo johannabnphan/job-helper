@@ -51,6 +51,23 @@ network calls.
   the self-check couldn't fix). A card on the page counts them and has a
   *Next flagged field* button. Editing a flagged field clears its flag.
 
+### Buddy (focus and motivation)
+
+Job hunting is hard to start, especially with ADHD. Buddy, at the top of the side panel,
+makes the next move obvious and turns real progress into small wins:
+
+- **One clear next step.** Set up profile → fill this application → review and submit →
+  finish one you started → open the next job → add links. You never have to decide what to do.
+- **Energy check-in** (Low / Medium / High). Today's missions scale to match, and low is fine.
+- **Three daily missions** that change every day: always one "apply" goal plus two of
+  saving links, autofilling forms and focus sessions, worded differently each day.
+- **XP and levels** for real activity only: +10 per link saved, +30 per form filled, +50 per
+  application marked Applied, +40 per focus session, +25 per mission finished. Each job
+  counts once. Buddy grows from an egg as you level up.
+- **Focus sessions** of 10, 15 or 25 minutes with a countdown.
+- **No guilt.** It shows "you showed up N of the last 7 days" instead of a streak that can
+  break, and once the missions are done it says you can stop.
+
 ### Never submits
 
 Every click the content script makes goes through `safeClick`
