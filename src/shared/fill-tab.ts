@@ -44,7 +44,10 @@ export async function fillTab(tab: chrome.tabs.Tab): Promise<TabFillResult> {
     let jobs = await getJobs();
     if (!findJob(jobs, tab.url)) jobs = addUrls(jobs, [tab.url]).jobs;
     const job = findJob(jobs, tab.url)!;
-    if (job.status === 'to_apply') job.status = 'filled';
+    if (job.status === 'saved') job.status = 'in_progress';
+    // Save and resume: remember how much was left to do.
+    job.remaining = counts.review + counts.missing;
+    job.lastFilledAt = Date.now();
     await recordActivity('filled', job.id);
     if (!job.title && tab.title) job.title = titleFromTab(tab.title);
     job.updatedAt = Date.now();

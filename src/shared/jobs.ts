@@ -3,10 +3,30 @@ import { uid } from './defaults';
 import type { Job, JobStatus } from './types';
 
 export const STATUS_LABELS: Record<JobStatus, string> = {
-  to_apply: 'To apply',
-  filled: 'Filled',
+  saved: 'Saved',
+  in_progress: 'In progress',
   applied: 'Applied',
+  assessment: 'Assessment',
+  interview: 'Interview',
+  offer: 'Offer',
+  rejected: 'Rejected',
 };
+
+export const STATUS_ORDER: JobStatus[] = ['saved', 'in_progress', 'applied', 'assessment', 'interview', 'offer', 'rejected'];
+
+/** Statuses from before the tracker existed. */
+const LEGACY: Record<string, JobStatus> = { to_apply: 'saved', filled: 'in_progress' };
+
+/** Upgrades jobs saved by older versions. */
+export function migrateJob(j: Job): Job {
+  const status = LEGACY[j.status as string] ?? j.status;
+  return status === j.status ? j : { ...j, status };
+}
+
+/** Submitted at some point (counts toward goals, never re-applied to). */
+export function isSubmitted(s: JobStatus): boolean {
+  return s !== 'saved' && s !== 'in_progress';
+}
 
 /** Query params that identify the posting and must be kept. */
 const KEEP_PARAMS = ['gh_jid', 'jobid', 'job_id', 'jid', 'id', 'token', 'jk', 'currentjobid'];
@@ -86,7 +106,7 @@ export function extractUrls(text: string): string[] {
 
 export function newJob(url: string, title = ''): Job {
   const now = Date.now();
-  return { id: uid(), url, title, company: companyFromUrl(url), status: 'to_apply', notes: '', addedAt: now, updatedAt: now };
+  return { id: uid(), url, title, company: companyFromUrl(url), status: 'saved', notes: '', addedAt: now, updatedAt: now };
 }
 
 /** Adds URLs that aren't already in the list. Returns the new list and how many were added. */

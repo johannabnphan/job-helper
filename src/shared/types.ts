@@ -82,7 +82,7 @@ export interface Answer {
   variants?: string[];
 }
 
-export type JobStatus = 'to_apply' | 'filled' | 'applied';
+export type JobStatus = 'saved' | 'in_progress' | 'applied' | 'assessment' | 'interview' | 'offer' | 'rejected';
 
 export interface Job {
   id: string;
@@ -93,6 +93,22 @@ export interface Job {
   notes: string;
   addedAt: number;
   updatedAt: number;
+  location?: string;
+  /** Only when the posting states it. Never estimated. */
+  salary?: string;
+  employmentType?: string;
+  /** Where it came from: 'link' (pasted) or a job board, e.g. 'greenhouse:acme'. */
+  source?: string;
+  appliedAt?: number;
+  /** Free-text next step, e.g. "Prep for recruiter call". */
+  nextAction?: string;
+  /** ISO date (YYYY-MM-DD) for an application/assessment deadline. */
+  deadline?: string;
+  /** ISO date for an optional follow-up reminder. */
+  followUp?: string;
+  /** Save and resume: fields still flagged after the last fill, and when. */
+  remaining?: number;
+  lastFilledAt?: number;
 }
 
 export interface StoredResume {

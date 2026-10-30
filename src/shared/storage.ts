@@ -2,9 +2,11 @@
 import { defaultAnswers, emptyProfile } from './defaults';
 import { emptyAi, type AiSettings } from './ai';
 import { applyActivity, emptyBuddy, type ActivityType, type BuddyState, type RecordResult } from './buddy';
+import { migrateJob } from './jobs';
+import { defaultPrefs, type Prefs } from './prefs';
 import type { Answer, Job, Profile } from './types';
 
-const KEYS = { profile: 'profile', answers: 'answers', jobs: 'jobs', buddy: 'buddy', ai: 'ai', resumeText: 'resumeText' } as const;
+const KEYS = { profile: 'profile', answers: 'answers', jobs: 'jobs', buddy: 'buddy', ai: 'ai', resumeText: 'resumeText', prefs: 'prefs' } as const;
 
 async function get<T>(key: string): Promise<T | undefined> {
   const res = await chrome.storage.local.get(key);
@@ -50,7 +52,7 @@ export function saveAnswers(answers: Answer[]): Promise<void> {
 }
 
 export async function getJobs(): Promise<Job[]> {
-  return (await get<Job[]>(KEYS.jobs)) ?? [];
+  return ((await get<Job[]>(KEYS.jobs)) ?? []).map(migrateJob);
 }
 
 export function saveJobs(jobs: Job[]): Promise<void> {
@@ -65,9 +67,21 @@ export function saveBuddy(state: BuddyState): Promise<void> {
   return set(KEYS.buddy, state);
 }
 
+export async function getPrefs(): Promise<Prefs> {
+  const stored = (await get<Partial<Prefs>>(KEYS.prefs)) ?? {};
+  const d = defaultPrefs();
+  return { ...d, ...stored, search: { ...d.search, ...(stored.search ?? {}) } };
+}
+
+export async function savePrefs(update: Partial<Prefs>): Promise<Prefs> {
+  const next = { ...(await getPrefs()), ...update };
+  await set(KEYS.prefs, next);
+  return next;
+}
+
 /** Logs real progress for Buddy (XP, missions). Safe to call twice for the same job. */
 export async function recordActivity(type: Exclude<ActivityType, 'mission_done'>, ref?: string): Promise<RecordResult> {
-  const result = applyActivity(await getBuddy(), type, ref);
+  const result = applyActivity(await getBuddy(), type, ref, Date.now(), (await getPrefs()).dailyGoal);
   if (result.gained) await saveBuddy(result.state);
   return result;
 }

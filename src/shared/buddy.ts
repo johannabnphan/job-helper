@@ -5,7 +5,7 @@
 import type { Job } from './types';
 
 export type Energy = 'low' | 'medium' | 'high';
-export type ActivityType = 'job_added' | 'filled' | 'applied' | 'focus_done' | 'mission_done';
+export type ActivityType = 'job_added' | 'reviewed' | 'filled' | 'applied' | 'resumed' | 'focus_done' | 'mission_done';
 
 export interface Activity {
   type: ActivityType;
@@ -23,10 +23,12 @@ export interface BuddyState {
 }
 
 export const XP: Record<ActivityType, number> = {
-  job_added: 10,
-  filled: 30,
+  job_added: 10, // saving a job link counts as reviewing it
+  reviewed: 10, // looked at a recommended job (saved or skipped)
+  filled: 20,
   applied: 50,
-  focus_done: 40,
+  resumed: 30, // finished an application you'd left part-way
+  focus_done: 20,
   mission_done: 25,
 };
 
@@ -84,70 +86,65 @@ function pick<T>(rand: () => number, items: T[]): T {
   return items[Math.floor(rand() * items.length)];
 }
 
-function shuffle<T>(rand: () => number, items: T[]): T[] {
-  const a = [...items];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
 
 // ---------------------------------------------------------------------------
 // Daily missions
 
 interface MissionTemplate {
   id: string;
-  counts: ActivityType;
-  target: Record<Energy, number>;
+  /** Activity that moves this mission forward. */
+  counts: ActivityType[];
   /** Several wordings so the day feels fresh. */
   text: Array<(n: number) => string>;
 }
 
 const s = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
-const TEMPLATES: MissionTemplate[] = [
-  {
+const T: Record<'review' | 'apply' | 'small' | 'focus', MissionTemplate> = {
+  review: {
+    id: 'review',
+    counts: ['reviewed', 'job_added'],
+    text: [
+      (n) => `Review ${n} ${s(n, 'job that fits you', 'jobs that fit you')}`,
+      (n) => `Look at ${n} recommended ${s(n, 'job', 'jobs')}`,
+      (n) => `Find ${n} ${s(n, 'role', 'roles')} you'd actually enjoy`,
+    ],
+  },
+  apply: {
     id: 'apply',
-    counts: 'applied',
-    target: { low: 1, medium: 2, high: 3 },
+    counts: ['applied'],
     text: [
       (n) => `Send ${n} ${s(n, 'application', 'applications')}`,
       (n) => `Hit Submit on ${n} ${s(n, 'job', 'jobs')}`,
       (n) => `Get ${n} ${s(n, 'application', 'applications')} out the door`,
     ],
   },
-  {
-    id: 'fill',
-    counts: 'filled',
-    target: { low: 1, medium: 2, high: 4 },
+  small: {
+    id: 'small',
+    counts: ['filled', 'resumed', 'applied'],
     text: [
-      (n) => `Autofill ${n} ${s(n, 'application', 'applications')}`,
-      (n) => `Let Job Helper fill ${n} ${s(n, 'form', 'forms')} for you`,
-      (n) => `Open ${n} ${s(n, 'application', 'applications')} and click Fill`,
+      () => 'Do one small step on an application',
+      () => 'Let Job Helper fill one form for you',
+      () => 'Open one application and click Fill',
     ],
   },
-  {
-    id: 'collect',
-    counts: 'job_added',
-    target: { low: 2, medium: 3, high: 5 },
-    text: [
-      (n) => `Save ${n} job links that look interesting`,
-      (n) => `Find ${n} roles you'd actually enjoy`,
-      (n) => `Add ${n} jobs to your list`,
-    ],
-  },
-  {
+  focus: {
     id: 'focus',
-    counts: 'focus_done',
-    target: { low: 1, medium: 1, high: 2 },
+    counts: ['focus_done'],
     text: [
       (n) => `Finish ${n} focus ${s(n, 'session', 'sessions')}`,
-      (n) => `Do ${n} short focus ${s(n, 'sprint', 'sprints')}`,
-      (n) => `Start a timer and stick with it ${s(n, 'once', `${n} times`)}`,
+      (n) => `Do ${n} calm focus ${s(n, 'sprint', 'sprints')}`,
+      (n) => `Start a timer and stay with it ${s(n, 'once', `${n} times`)}`,
     ],
   },
-];
+};
+
+/** What each energy level suggests. The apply target can be overridden by the user's daily goal. */
+const PLANS: Record<Energy, Array<[keyof typeof T, number]>> = {
+  low: [['review', 1], ['small', 1]],
+  medium: [['review', 3], ['apply', 2]],
+  high: [['focus', 2], ['apply', 4], ['review', 5]],
+};
 
 export interface Mission {
   id: string;
@@ -155,18 +152,20 @@ export interface Mission {
   target: number;
   progress: number;
   done: boolean;
-  counts: ActivityType;
+  counts: ActivityType[];
 }
 
-/** Activity of one type on a given day, counting each job only once. */
-export function countOn(activity: Activity[], type: ActivityType, day: string): number {
+/** Activity of these types on a given day, counting each job only once per type. */
+export function countOn(activity: Activity[], types: ActivityType | ActivityType[], day: string): number {
+  const want = Array.isArray(types) ? types : [types];
   const seen = new Set<string>();
   let n = 0;
   for (const a of activity) {
-    if (a.type !== type || dayKey(a.at) !== day) continue;
+    if (!want.includes(a.type) || dayKey(a.at) !== day) continue;
     if (a.ref) {
-      if (seen.has(a.ref)) continue;
-      seen.add(a.ref);
+      const key = `${a.type}:${a.ref}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
     }
     n++;
   }
@@ -174,18 +173,23 @@ export function countOn(activity: Activity[], type: ActivityType, day: string): 
 }
 
 /**
- * Three missions for the day: always one "apply" mission, plus two others
- * that change daily. Targets scale with today's energy.
+ * Today's missions for an energy level. Wording changes daily (seeded by the
+ * date, stable within a day); `dailyGoal` overrides the application target.
  */
-export function dailyMissions(day: string, energy: Energy, activity: Activity[]): Mission[] {
+export function dailyMissions(day: string, energy: Energy, activity: Activity[], dailyGoal?: number | null): Mission[] {
   const rand = seeded(`missions:${day}`);
-  const apply = TEMPLATES[0];
-  const others = shuffle(rand, TEMPLATES.slice(1)).slice(0, 2);
-  return [apply, ...others].map((t) => {
-    const target = t.target[energy];
+  return PLANS[energy].map(([key, base]) => {
+    const t = T[key];
+    const target = key === 'apply' && dailyGoal ? dailyGoal : base;
     const progress = Math.min(target, countOn(activity, t.counts, day));
     return { id: `${day}:${t.id}`, text: pick(rand, t.text)(target), target, progress, done: progress >= target, counts: t.counts };
   });
+}
+
+/** Applications sent today, and the goal (user's own, or the energy suggestion). */
+export function todaysGoal(activity: Activity[], energy: Energy, dailyGoal?: number | null, day = dayKey()): { done: number; goal: number } {
+  const suggested = energy === 'low' ? 1 : energy === 'medium' ? 2 : 4;
+  return { done: countOn(activity, 'applied', day), goal: dailyGoal || suggested };
 }
 
 // ---------------------------------------------------------------------------
@@ -220,14 +224,14 @@ export function daysActiveThisWeek(activity: Activity[], now = Date.now()): numb
 }
 
 export function encouragement(missions: Mission[]): string {
-  const apply = missions.find((m) => m.counts === 'applied');
+  const apply = missions.find((m) => m.counts.includes('applied') && m.id.endsWith(':apply'));
   const allDone = missions.every((m) => m.done);
   if (allDone) return "All of today's missions are done. You can stop here. Anything more is a bonus 🎉";
   if (apply && !apply.done) {
     const left = apply.target - apply.progress;
     return apply.progress ? `Just ${left} more ${left === 1 ? 'application' : 'applications'} to reach your goal!` : 'Your first application is the hardest. Let\'s do it together.';
   }
-  return 'Application goal done! The rest is extra credit.';
+  return apply ? 'Application goal done! The rest is extra credit.' : 'One small step is plenty today.';
 }
 
 // ---------------------------------------------------------------------------
@@ -255,17 +259,17 @@ export function nextStep(ctx: {
     return { action: 'profile', title: 'Set up your profile once', detail: 'Upload your resume and Job Helper fills in the rest. You only do this one time.', button: 'Open profile', xp: 0 };
   }
   const cur = ctx.currentJob;
-  if (cur?.status === 'to_apply') {
+  if (cur?.status === 'saved') {
     return { action: 'fill', title: 'Fill this application', detail: 'Click Fill and let Job Helper do the typing. You just check the highlighted bits.', button: 'Fill this page', xp: XP.filled, job: cur };
   }
-  if (cur?.status === 'filled') {
+  if (cur?.status === 'in_progress') {
     return { action: 'mark_applied', title: 'Review and submit', detail: 'Check the amber and red fields, click the site\'s Submit button, then come back and tap Done.', button: 'I submitted it', xp: XP.applied, job: cur };
   }
-  const filled = ctx.jobs.find((j) => j.status === 'filled');
+  const filled = ctx.jobs.find((j) => j.status === 'in_progress');
   if (filled) {
     return { action: 'open_job', title: 'Finish one you started', detail: `"${filled.title || filled.company || 'This job'}" is already filled. Just review and submit.`, button: 'Open it', xp: XP.applied, job: filled };
   }
-  const next = [...ctx.jobs].reverse().find((j) => j.status === 'to_apply');
+  const next = [...ctx.jobs].reverse().find((j) => j.status === 'saved');
   if (next) {
     return { action: 'open_job', title: 'Apply to the next job', detail: `Next up: ${next.title || next.company || 'a job from your list'}. Open it and click Fill.`, button: 'Open next job', xp: XP.filled, job: next };
   }
@@ -285,7 +289,13 @@ export interface RecordResult {
   levelUp: boolean;
 }
 
-export function applyActivity(state: BuddyState, type: Exclude<ActivityType, 'mission_done'>, ref?: string, now = Date.now()): RecordResult {
+export function applyActivity(
+  state: BuddyState,
+  type: Exclude<ActivityType, 'mission_done'>,
+  ref?: string,
+  now = Date.now(),
+  dailyGoal?: number | null,
+): RecordResult {
   const next: BuddyState = { ...state, activity: [...state.activity] };
   const day = dayKey(now);
   // Same job, same kind of activity: no double XP (e.g. filling a form twice).
@@ -293,13 +303,13 @@ export function applyActivity(state: BuddyState, type: Exclude<ActivityType, 'mi
     return { state, gained: 0, missionsCompleted: [], levelUp: false };
   }
   const energy = next.energy?.date === day ? next.energy.level : 'medium';
-  const before = dailyMissions(day, energy, next.activity);
+  const before = dailyMissions(day, energy, next.activity, dailyGoal);
   const beforeLevel = levelInfo(next.xp).level;
 
   next.activity.push({ type, at: now, ref });
   let gained = XP[type];
 
-  const after = dailyMissions(day, energy, next.activity);
+  const after = dailyMissions(day, energy, next.activity, dailyGoal);
   const completed = after.filter((m, i) => m.done && !before[i].done && !next.activity.some((a) => a.type === 'mission_done' && a.ref === m.id));
   for (const m of completed) {
     next.activity.push({ type: 'mission_done', at: now, ref: m.id });

@@ -2,6 +2,7 @@ import '../shared/ui.css';
 import './sidepanel.css';
 import { clearHighlights, fillTab, type TabFillResult } from '../shared/fill-tab';
 import { addUrls, atsName, extractUrls, STATUS_LABELS } from '../shared/jobs';
+import { setStatus } from '../shared/applications';
 import { cheer } from '../shared/buddy';
 import { getBuddy, getJobs, getProfile, onStorageChange, recordActivity, saveJobs } from '../shared/storage';
 import { buddyCard, type BuddyActions } from './buddy-view';
@@ -9,7 +10,7 @@ import type { Job, JobStatus } from '../shared/types';
 import { h, toast } from '../shared/ui';
 
 const app = document.getElementById('app')!;
-let filter: JobStatus | 'all' = 'to_apply';
+let filter: JobStatus | 'all' = 'saved';
 let lastResult: { url: string; result: TabFillResult } | undefined;
 
 function openOptions(hash = ''): void {
@@ -132,17 +133,11 @@ function resultView(r: TabFillResult): HTMLElement {
 // Job list
 
 function jobRow(job: Job, jobs: Job[]): HTMLElement {
-  const save = async (fn: (j: Job) => void) => {
-    fn(job);
-    job.updatedAt = Date.now();
-    await saveJobs(jobs);
-  };
   const status = h(
     'select',
     { class: `status ${job.status}`, onchange: async (e: Event) => {
         const status = (e.target as HTMLSelectElement).value as JobStatus;
-        await save((j) => (j.status = status));
-        if (status === 'applied') await recordActivity('applied', job.id);
+        await setStatus(job.id, status);
       } },
     (Object.keys(STATUS_LABELS) as JobStatus[]).map((s) => h('option', { value: s, selected: s === job.status }, STATUS_LABELS[s])),
   );
@@ -183,7 +178,7 @@ async function jobsCard(): Promise<HTMLElement> {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void add();
   });
 
-  const tabs: Array<JobStatus | 'all'> = ['to_apply', 'filled', 'applied', 'all'];
+  const tabs: Array<JobStatus | 'all'> = ['saved', 'in_progress', 'applied', 'all'];
   const count = (s: JobStatus | 'all') => (s === 'all' ? jobs.length : jobs.filter((j) => j.status === s).length);
   const visible = jobs.filter((j) => filter === 'all' || j.status === filter);
 
@@ -216,15 +211,7 @@ const buddyActions: BuddyActions = {
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el?.focus();
   },
-  markApplied: async (jobId) => {
-    const jobs = await getJobs();
-    const job = jobs.find((j) => j.id === jobId);
-    if (!job) return;
-    job.status = 'applied';
-    job.updatedAt = Date.now();
-    await saveJobs(jobs);
-    await recordActivity('applied', job.id);
-  },
+  markApplied: (jobId) => setStatus(jobId, 'applied'),
 };
 
 /** "+50 XP · Nice work!" pop when Buddy's XP goes up. */
