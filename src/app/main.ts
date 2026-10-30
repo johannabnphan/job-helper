@@ -62,7 +62,7 @@ async function render(): Promise<void> {
     else {
       window.scrollTo(0, 0);
       document.getElementById('main')?.focus({ preventScroll: true });
-      document.title = `${route === 'dashboard' ? 'Dashboard' : route[0].toUpperCase() + route.slice(1)} · Job Helper`;
+      document.title = `${route === 'dashboard' ? 'Dashboard' : route[0].toUpperCase() + route.slice(1)} · ApplyBuddy`;
     }
     lastRoute = here;
   } finally {

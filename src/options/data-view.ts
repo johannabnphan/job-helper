@@ -13,7 +13,7 @@ export function dataView(): HTMLElement {
       toast('Imported. Reloading…');
       setTimeout(() => location.reload(), 600);
     } catch {
-      toast('That file is not a Job Helper backup.', 'error');
+      toast('That file is not a ApplyBuddy backup.', 'error');
     }
   });
 
@@ -28,7 +28,7 @@ export function dataView(): HTMLElement {
         'p',
         { style: 'margin:0' },
         'Your profile, answer bank and job list are stored in chrome.storage.local, and your resume file in IndexedDB. ',
-        'Nothing is sent to a server. Job Helper only reads and writes the application page you ask it to fill.',
+        'Nothing is sent to a server. ApplyBuddy only reads and writes the application page you ask it to fill.',
       ),
     ),
     h(

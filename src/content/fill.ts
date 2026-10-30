@@ -1,5 +1,5 @@
 // Low-level value setters that work with React/Angular/Vue-controlled inputs.
-// Job Helper never submits: every click goes through safeClick, which refuses
+// ApplyBuddy never submits: every click goes through safeClick, which refuses
 // anything that could submit or advance the form.
 import { pickBestOption, type OptionPick } from '../shared/matcher';
 import { byIdNear, deepQueryAll, hostOf } from './dom';
@@ -26,7 +26,7 @@ export function couldSubmit(el: HTMLElement): boolean {
 
 export function safeClick(el: HTMLElement): boolean {
   if (couldSubmit(el)) {
-    console.warn('[Job Helper] refused to click a control that could submit the form', el);
+    console.warn('[ApplyBuddy] refused to click a control that could submit the form', el);
     return false;
   }
   const opts = { bubbles: true, cancelable: true, view: window } as const;
@@ -127,7 +127,7 @@ export function setFile(input: HTMLInputElement, file: File): boolean {
     }
     return true;
   } catch (err) {
-    console.warn('[Job Helper] could not attach file', err);
+    console.warn('[ApplyBuddy] could not attach file', err);
     return false;
   }
 }

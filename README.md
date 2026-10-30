@@ -1,4 +1,4 @@
-# Job Helper
+# ApplyBuddy
 
 A Chrome extension (Manifest V3) that fills the repetitive fields of job applications
 from your resume and saved answers, then highlights what you should check.
@@ -129,9 +129,9 @@ The unpacked extension is written to `dist/`.
 2. Open `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** (toggle, top right).
 4. Click **Load unpacked** and select this repo's **`dist`** folder (not the repo root).
-5. Pin Job Helper from the puzzle-piece menu, then click its icon to open the side panel.
+5. Pin ApplyBuddy from the puzzle-piece menu, then click its icon to open the side panel.
 
-After you change code, run `npm run build` again and click the reload icon on the Job Helper
+After you change code, run `npm run build` again and click the reload icon on the ApplyBuddy
 card in `chrome://extensions`. Reload any open application tabs too.
 
 ## Use it
@@ -147,7 +147,7 @@ card in `chrome://extensions`. Reload any open application tabs too.
    yourself. Set the job's status to **Applied**.
 
 Workday splits the application into steps. Click **Fill this page** on each step, then
-click Save and Continue yourself. Job Helper adds Work Experience and Education blocks
+click Save and Continue yourself. ApplyBuddy adds Work Experience and Education blocks
 itself. If a block doesn't appear, it flags the **Add** button so you can click it and fill
 again.
 
@@ -213,7 +213,7 @@ profile keys (`describe`), finds better labels (`label`), or exposes custom widg
 Built and working: everything above, all local to your browser.
 
 Needs extra services or isn't built yet:
-- **Submitting for you.** By design Job Helper never submits. You click Submit on the
+- **Submitting for you.** By design ApplyBuddy never submits. You click Submit on the
   site, then **I submitted it** (no site offers a safe API for this).
 - **More job sources.** Find Jobs reads Greenhouse, Lever and Ashby public boards for
   companies you add. Aggregated search (LinkedIn, Indeed) needs partner APIs.

@@ -79,7 +79,7 @@ export class AnswersView {
       h(
         'p',
         { class: 'muted', style: 'margin:0' },
-        'Answers to common application questions. When a form question contains one of the keywords, Job Helper fills in your answer. ',
+        'Answers to common application questions. When a form question contains one of the keywords, ApplyBuddy fills in your answer. ',
         'For dropdowns and Yes/No questions, start the answer with the option to pick (for example "No" or "LinkedIn").',
       ),
       ...this.answers.map((a) => this.card(a)),

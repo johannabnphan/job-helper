@@ -158,7 +158,7 @@ function heroCard(
       'p',
       { class: 'small why' },
       !ready
-        ? 'Takes about 3 minutes. Upload your resume and Job Helper fills in the rest.'
+        ? 'Takes about 3 minutes. Upload your resume and ApplyBuddy fills in the rest.'
         : next
           ? `Up next: ${next.title || next.company || 'a saved job'}${next.company && next.title ? ` at ${next.company}` : ''}.`
           : 'No jobs saved yet. Start Applying will help you find one.',

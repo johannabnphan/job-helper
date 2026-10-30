@@ -71,7 +71,7 @@ export function onboarding(s: AppState): HTMLElement {
         status.textContent = 'Saved for uploads. Reading details works with PDF or text resumes.';
       }
     });
-    body = h('div', { class: 'stack' }, h('h1', {}, 'Add your resume'), h('p', {}, 'Job Helper uses it to fill applications for you. It stays in this browser.'), input, status);
+    body = h('div', { class: 'stack' }, h('h1', {}, 'Add your resume'), h('p', {}, 'ApplyBuddy uses it to fill applications for you. It stays in this browser.'), input, status);
   } else if (step === 4) {
     const skills = h('textarea', { rows: 3, placeholder: 'e.g. Figma, user research, SQL' });
     void getProfile().then((p) => (skills.value = p.skills.join(', ')));
@@ -111,7 +111,7 @@ export function onboarding(s: AppState): HTMLElement {
         step > 1 ? h('button', { class: 'ghost', onclick: back }, 'Back') : null,
         h('span', { class: 'spacer' }),
         h('button', { class: 'ghost', onclick: next }, 'Skip'),
-        h('button', { class: 'primary', onclick: async () => { await save(); await next(); } }, step === STEPS ? 'Start using Job Helper' : 'Continue'),
+        h('button', { class: 'primary', onclick: async () => { await save(); await next(); } }, step === STEPS ? 'Start using ApplyBuddy' : 'Continue'),
       ),
       step === 1 ? h('button', { class: 'link small', style: 'align-self:center', onclick: finish }, 'Skip setup for now') : null,
     ),

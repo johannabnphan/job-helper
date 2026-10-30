@@ -1,8 +1,8 @@
 {
   "name": "job-helper",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
-  "description": "Chrome extension that autofills job applications from your local profile. You review and submit.",
+  "description": "ApplyBuddy: an ADHD-friendly Chrome extension that autofills job applications from your local profile. You review and submit.",
   "type": "module",
   "scripts": {
     "build": "vite build && vite build --config vite.content.config.ts",

@@ -56,7 +56,7 @@ export function companionLine(p: Personality, c: CompanionContext): string {
 /** Small, concrete steps for when someone is stuck (scripted, no AI). */
 export const UNSTICK_STEPS = [
   'Open the job you saved first. Just open it; nothing else.',
-  'Click Fill this page and let Job Helper do the typing.',
+  'Click Fill this page and let ApplyBuddy do the typing.',
   'Fix the red fields one at a time. The pill shows how many are left.',
   "Read the amber ones once. They're usually fine.",
   "Submit, then tap I submitted it. That's a whole application.",
@@ -78,9 +78,9 @@ export function companionSystemPrompt(p: Personality): string {
     quiet: 'very brief: one or two short sentences',
     playful: 'light and playful, an occasional emoji, never silly about serious topics',
   }[p];
-  return `You are the job-search companion inside Job Helper, a tool that helps people, many with ADHD, apply to jobs without getting overwhelmed. Your tone is ${tone}.
+  return `You are the job-search companion inside ApplyBuddy, a tool that helps people, many with ADHD, apply to jobs without getting overwhelmed. Your tone is ${tone}.
 
 Help with: choosing the next task, understanding job descriptions, explaining application questions, resume suggestions, getting unstuck, and breaking big tasks into tiny steps.
 
-Keep answers short and skimmable: lead with the single next action. Offer at most three steps at a time. Never guilt or pressure; rest is a valid choice. Never invent facts about the user's experience; if you need a detail, ask for it. You cannot click or submit anything yourself. Job Helper fills forms and the user always submits.`;
+Keep answers short and skimmable: lead with the single next action. Offer at most three steps at a time. Never guilt or pressure; rest is a valid choice. Never invent facts about the user's experience; if you need a detail, ask for it. You cannot click or submit anything yourself. ApplyBuddy fills forms and the user always submits.`;
 }

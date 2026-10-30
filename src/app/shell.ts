@@ -12,7 +12,7 @@ export const NAV: Array<{ route: Route; label: string; icon: IconName }> = [
 ];
 
 export function logo(): HTMLElement {
-  return h('div', { class: 'brand' }, h('img', { src: '../../icons/icon48.png', width: 28, height: 28, alt: '' }), h('span', {}, 'Job Helper'));
+  return h('div', { class: 'brand' }, h('img', { src: '../../icons/icon48.png', width: 28, height: 28, alt: '' }), h('span', {}, 'ApplyBuddy'));
 }
 
 export function shell(active: Route, content: HTMLElement, opts: { name: string; xp?: string }): HTMLElement {

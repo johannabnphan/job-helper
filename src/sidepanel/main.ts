@@ -236,7 +236,7 @@ async function render(): Promise<void> {
       'header',
       { class: 'top row' },
       h('img', { src: '../../icons/icon32.png', width: 20, height: 20, alt: '' }),
-      h('h1', {}, 'Job Helper'),
+      h('h1', {}, 'ApplyBuddy'),
       h('span', { class: 'spacer' }),
       h('button', { class: 'icon primary', onclick: () => chrome.tabs.create({ url: chrome.runtime.getURL('src/app/index.html#dashboard') }) }, 'Open app'),
       h('button', { class: 'icon', onclick: () => openOptions('#settings/profile') }, 'Profile'),

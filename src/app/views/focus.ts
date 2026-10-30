@@ -55,7 +55,7 @@ function jobFlow(job: Job): HTMLElement {
   const fill = async (btn: HTMLButtonElement) => {
     btn.disabled = true;
     btn.replaceChildren(h('span', { class: 'spinner', 'aria-hidden': 'true' }), 'Opening and filling…');
-    status.textContent = 'The job opens in a new tab. Job Helper fills it there.';
+    status.textContent = 'The job opens in a new tab. ApplyBuddy fills it there.';
     const res = await openAndFill(job);
     if (res.kind === 'error') {
       status.textContent = `Something went wrong: ${res.message}. You can still open it and click Fill in the side panel.`;
@@ -74,7 +74,7 @@ function jobFlow(job: Job): HTMLElement {
     1: h(
       'div',
       { class: 'stack', style: 'align-items:center' },
-      h('p', { class: 'focus-step' }, "Next step: open the application. Job Helper fills in what it knows."),
+      h('p', { class: 'focus-step' }, "Next step: open the application. ApplyBuddy fills in what it knows."),
       h('button', { class: 'primary large', onclick: (e: Event) => fill(e.currentTarget as HTMLButtonElement) }, icon('sparkles', 18), 'Open and autofill'),
       h('button', { class: 'link small', onclick: () => openJob(job) }, 'Just open it'),
     ),
@@ -88,7 +88,7 @@ function jobFlow(job: Job): HTMLElement {
           ? `Next step: finish the ${job.remaining} highlighted ${job.remaining === 1 ? 'field' : 'fields'}, then submit on the site.`
           : 'Next step: give it one read, then submit on the site.',
       ),
-      h('p', { class: 'small muted' }, 'The side panel in that tab lists what to check. Job Helper never submits for you.'),
+      h('p', { class: 'small muted' }, 'The side panel in that tab lists what to check. ApplyBuddy never submits for you.'),
       h(
         'div',
         { class: 'row wrap', style: 'justify-content:center' },

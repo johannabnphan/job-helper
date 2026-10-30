@@ -126,7 +126,7 @@ const T: Record<'review' | 'apply' | 'small' | 'focus', MissionTemplate> = {
     counts: ['filled', 'resumed', 'applied'],
     text: [
       () => 'Do one small step on an application',
-      () => 'Let Job Helper fill one form for you',
+      () => 'Let ApplyBuddy fill one form for you',
       () => 'Open one application and click Fill',
     ],
   },
@@ -258,11 +258,11 @@ export function nextStep(ctx: {
   allMissionsDone: boolean;
 }): NextStep {
   if (!ctx.profileReady) {
-    return { action: 'profile', title: 'Set up your profile once', detail: 'Upload your resume and Job Helper fills in the rest. You only do this one time.', button: 'Open profile', xp: 0 };
+    return { action: 'profile', title: 'Set up your profile once', detail: 'Upload your resume and ApplyBuddy fills in the rest. You only do this one time.', button: 'Open profile', xp: 0 };
   }
   const cur = ctx.currentJob;
   if (cur?.status === 'saved') {
-    return { action: 'fill', title: 'Fill this application', detail: 'Click Fill and let Job Helper do the typing. You just check the highlighted bits.', button: 'Fill this page', xp: XP.filled, job: cur };
+    return { action: 'fill', title: 'Fill this application', detail: 'Click Fill and let ApplyBuddy do the typing. You just check the highlighted bits.', button: 'Fill this page', xp: XP.filled, job: cur };
   }
   if (cur?.status === 'in_progress') {
     return { action: 'mark_applied', title: 'Review and submit', detail: 'Check the amber and red fields, click the site\'s Submit button, then come back and tap Done.', button: 'I submitted it', xp: XP.applied, job: cur };

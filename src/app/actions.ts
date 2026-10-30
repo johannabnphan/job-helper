@@ -34,7 +34,7 @@ export type OpenResult =
   | { kind: 'error'; message: string };
 
 /**
- * Opens a job in a new tab and runs autofill once it loads. Job Helper never
+ * Opens a job in a new tab and runs autofill once it loads. ApplyBuddy never
  * submits; the user reviews and submits in that tab.
  */
 export async function openAndFill(job: Job): Promise<OpenResult> {

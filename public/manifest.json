@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Job Helper",
-  "version": "0.5.0",
+  "name": "ApplyBuddy",
+  "version": "0.5.1",
   "description": "Fills repetitive job application fields from your local profile. You review and click Submit yourself.",
   "minimum_chrome_version": "120",
   "icons": {
@@ -11,7 +11,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Open Job Helper",
+    "default_title": "Open ApplyBuddy",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"

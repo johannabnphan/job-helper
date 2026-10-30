@@ -26,7 +26,7 @@ const nav = h(
 const content = h('div', { class: 'content' });
 
 document.getElementById('app')!.append(
-  h('header', { class: 'top' }, h('div', { class: 'row' }, h('img', { src: '../../icons/icon32.png', width: 24, height: 24, alt: '' }), h('h1', {}, 'Job Helper')), nav),
+  h('header', { class: 'top' }, h('div', { class: 'row' }, h('img', { src: '../../icons/icon32.png', width: 24, height: 24, alt: '' }), h('h1', {}, 'ApplyBuddy')), nav),
   content,
 );
 

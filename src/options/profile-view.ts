@@ -65,7 +65,7 @@ const SECTIONS: Array<{ title: string; hint?: string; fields: FieldDef[] }> = [
   },
   {
     title: 'Voluntary self-identification',
-    hint: 'Optional. Leave a field blank and Job Helper will flag that question for you to answer on each form.',
+    hint: 'Optional. Leave a field blank and ApplyBuddy will flag that question for you to answer on each form.',
     fields: [
       ['eeo.gender', 'Gender', { list: EEO_SUGGESTIONS }],
       ['eeo.race', 'Race / ethnicity', { list: EEO_SUGGESTIONS }],

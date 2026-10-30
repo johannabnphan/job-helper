@@ -19,7 +19,7 @@ export interface TabFillResult {
 }
 
 export async function fillTab(tab: chrome.tabs.Tab): Promise<TabFillResult> {
-  if (!tab.id || !tab.url || !/^https?:|^file:/.test(tab.url)) throw new Error("Job Helper can't run on this page.");
+  if (!tab.id || !tab.url || !/^https?:|^file:/.test(tab.url)) throw new Error("ApplyBuddy can't run on this page.");
   const [profile, answers, resume] = await Promise.all([getProfile(), getAnswers(), getResume()]);
   const payload: FillPayload = {
     profile,

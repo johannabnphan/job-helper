@@ -19,7 +19,7 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
   try {
     await fillTab(tab);
   } catch (err) {
-    console.warn('[Job Helper]', err);
+    console.warn('[ApplyBuddy]', err);
   }
 });
 

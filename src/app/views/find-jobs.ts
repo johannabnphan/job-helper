@@ -96,7 +96,7 @@ function boardsIntro(): HTMLElement {
     h(
       'p',
       {},
-      'Paste a link to a company’s careers page if it uses Greenhouse, Lever or Ashby (many do). Job Helper pulls their real, current openings and shows you the ones that match.',
+      'Paste a link to a company’s careers page if it uses Greenhouse, Lever or Ashby (many do). ApplyBuddy pulls their real, current openings and shows you the ones that match.',
     ),
     addBoardForm(),
     h('p', { class: 'small muted' }, 'Tip: open a job on the company’s site. If the link contains greenhouse.io, lever.co or ashbyhq.com, it will work. Other job boards are coming later.'),

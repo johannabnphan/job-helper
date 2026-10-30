@@ -236,7 +236,7 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
       const err = await apply(p);
       if (err) failed.set(p.f.el, err);
     } catch (err) {
-      console.warn('[Job Helper] failed on field', p.f, err);
+      console.warn('[ApplyBuddy] failed on field', p.f, err);
       failed.set(p.f.el, 'Could not fill this field automatically');
     }
   }
@@ -286,7 +286,7 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
         const has = (f.el as HTMLInputElement).files?.length;
         if (p.key === 'resume') {
           if (has) record(p, 'filled', `Attached ${(f.el as HTMLInputElement).files![0].name}`);
-          else record(p, 'missing', resume ? 'Could not attach your resume. Upload it yourself.' : 'No resume saved in Job Helper. Upload it yourself.');
+          else record(p, 'missing', resume ? 'Could not attach your resume. Upload it yourself.' : 'No resume saved in ApplyBuddy. Upload it yourself.');
         } else if (!has && (f.required || p.key === 'coverLetter')) {
           record(p, 'missing', isResolved(res) ? 'Upload a file' : res.reason);
         }
@@ -335,7 +335,7 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
         record(p, 'filled', corrected ? `${res.source} (corrected after the site changed it)` : res.source, current);
       }
     } catch (err) {
-      console.warn('[Job Helper] self-check failed on field', f, err);
+      console.warn('[ApplyBuddy] self-check failed on field', f, err);
       record(p, 'missing', 'Could not check this field. Review it yourself.');
     }
   }
@@ -364,7 +364,7 @@ async function draftInto(f: FieldHandle): Promise<string | undefined> {
   try {
     res = (await chrome.runtime.sendMessage(req)) as DraftResponse | undefined;
   } catch (err) {
-    return `Couldn't reach Job Helper (${String(err)}). Reload the page and try again.`;
+    return `Couldn't reach ApplyBuddy (${String(err)}). Reload the page and try again.`;
   }
   if (!res) return 'No response. Reload the page and try again.';
   if (!res.ok) return res.error;

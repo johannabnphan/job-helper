@@ -177,7 +177,7 @@ class Overlay {
     this.pill.querySelector('.text')!.textContent = left.length ? `${left.length} to check` : 'All checked. Submit when ready';
     (this.pill.querySelector('.next') as HTMLButtonElement).style.display = left.length && !this.minimized ? '' : 'none';
     (this.pill.querySelector('.min-btn') as HTMLElement).textContent = this.minimized ? '+' : '–';
-    this.pill.title = 'Job Helper never submits. Drag to move.';
+    this.pill.title = 'ApplyBuddy never submits. Drag to move.';
   }
 
   /** Drag the pill anywhere so it never covers what you're reading. */
