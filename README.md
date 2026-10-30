@@ -45,11 +45,19 @@ network calls.
     wrong is flagged. Values that were already there (from the site or browser autofill)
     are replaced with your profile's values and flagged so you can see what changed.
     Fields *you* edited on the page are never overwritten.
+- **AI drafts** (optional): on written questions such as "Why do you want to work here?",
+  a ✨ *Draft with AI* button asks Claude to write a first draft from the job page and your
+  resume, using your own Anthropic API key (Profile → AI drafts). Drafts never invent
+  experience: gaps are left as [placeholders]. They stay highlighted until you've read them,
+  and nothing is sent until you click.
 - **Review highlights**: green = filled, amber = filled but check it (open-ended answers,
   closest-option picks, loose answer matches, replaced values, optional unknown fields),
   red = needs you (no confident match, open-ended questions, missing profile data, fields
-  the self-check couldn't fix). A card on the page counts them and has a
-  *Next flagged field* button. Editing a flagged field clears its flag.
+  the self-check couldn't fix). A small draggable pill on the page shows how many are left,
+  with *Next ↓*, and it can be minimized. The side panel lists the same fields: click one to
+  jump to it. Flags clear by themselves when the field is actually fixed. A missing field
+  clears once it has a value (custom dropdowns included), and a review field clears once
+  you've looked at or edited it.
 
 ### Buddy (focus and motivation)
 

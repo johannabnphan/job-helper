@@ -1,6 +1,7 @@
 import '../shared/ui.css';
 import './options.css';
 import { h } from '../shared/ui';
+import { aiView } from './ai-view';
 import { AnswersView } from './answers-view';
 import { dataView } from './data-view';
 import { ProfileView } from './profile-view';
@@ -8,13 +9,14 @@ import { ProfileView } from './profile-view';
 const TABS = [
   ['profile', 'Profile'],
   ['answers', 'Answer bank'],
+  ['ai', 'AI drafts'],
   ['data', 'Data and privacy'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
 const profile = new ProfileView();
 const answers = new AnswersView();
-const panes: Record<Tab, HTMLElement> = { profile: profile.el, answers: answers.el, data: dataView() };
+const panes: Record<Tab, HTMLElement> = { profile: profile.el, answers: answers.el, ai: await aiView(), data: dataView() };
 
 const nav = h(
   'nav',

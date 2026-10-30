@@ -3,7 +3,7 @@
 import { uid } from '../shared/defaults';
 import { applyParsedResume, parseResumeText } from '../shared/resume-parser';
 import { deleteResume, getResume, saveResume } from '../shared/resume-store';
-import { getProfile, saveProfile } from '../shared/storage';
+import { getProfile, saveProfile, saveResumeText } from '../shared/storage';
 import type { EducationEntry, Profile, WorkEntry } from '../shared/types';
 import { formatBytes, getPath, h, setPath, toast } from '../shared/ui';
 import { resumeToText } from './resume-text';
@@ -215,6 +215,8 @@ export class ProfileView {
       const file = fileInput.files?.[0];
       if (!file) return;
       await saveResume(file);
+      // Keep the plain text too, for AI drafts.
+      await resumeToText(file, file.name).then(saveResumeText).catch(() => undefined);
       toast(`Saved ${file.name}`);
       await this.rerender();
     });
@@ -258,6 +260,7 @@ export class ProfileView {
     if (!resume) return;
     try {
       const text = await resumeToText(resume.data, resume.name);
+      await saveResumeText(text);
       this.collect();
       const { profile, changed } = applyParsedResume(this.state, parseResumeText(text));
       if (!changed.length) {

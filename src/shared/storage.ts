@@ -1,9 +1,10 @@
 // Thin typed wrapper over chrome.storage.local. Nothing here leaves the browser.
 import { defaultAnswers, emptyProfile } from './defaults';
+import { emptyAi, type AiSettings } from './ai';
 import { applyActivity, emptyBuddy, type ActivityType, type BuddyState, type RecordResult } from './buddy';
 import type { Answer, Job, Profile } from './types';
 
-const KEYS = { profile: 'profile', answers: 'answers', jobs: 'jobs', buddy: 'buddy' } as const;
+const KEYS = { profile: 'profile', answers: 'answers', jobs: 'jobs', buddy: 'buddy', ai: 'ai', resumeText: 'resumeText' } as const;
 
 async function get<T>(key: string): Promise<T | undefined> {
   const res = await chrome.storage.local.get(key);
@@ -69,6 +70,23 @@ export async function recordActivity(type: Exclude<ActivityType, 'mission_done'>
   const result = applyActivity(await getBuddy(), type, ref);
   if (result.gained) await saveBuddy(result.state);
   return result;
+}
+
+export async function getAi(): Promise<AiSettings> {
+  return { ...emptyAi(), ...((await get<AiSettings>(KEYS.ai)) ?? {}) };
+}
+
+export function saveAi(ai: AiSettings): Promise<void> {
+  return set(KEYS.ai, ai);
+}
+
+/** Plain text of the resume, saved when it's uploaded or imported. Used for AI drafts. */
+export async function getResumeText(): Promise<string> {
+  return (await get<string>(KEYS.resumeText)) ?? '';
+}
+
+export function saveResumeText(text: string): Promise<void> {
+  return set(KEYS.resumeText, text);
 }
 
 /** Calls `cb` whenever one of the given keys changes (from any extension page). */

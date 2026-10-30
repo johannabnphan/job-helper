@@ -8,6 +8,7 @@
 import type { FieldReport, FillPayload, FillReport } from '../shared/messages';
 import {
   EDU_KEYS,
+  isOpenEnded,
   WEAK_OPTION,
   WORK_KEYS,
   isResolved,
@@ -32,9 +33,12 @@ import {
   setRadio,
   setSelect,
   setValue,
+  typeText,
 } from './fill';
 import { overlay, type Mark } from './overlay';
+import type { DraftRequest, DraftResponse } from '../shared/ai';
 import { eventTarget } from './dom';
+import { jobPageText } from './job-text';
 import { expandSections } from './sections';
 
 const YES = /^(yes|y|true|i agree|i do|i am|i have|i will)\b/i;
@@ -182,9 +186,13 @@ async function applyValue(p: Plan): Promise<string | undefined> {
       return undefined;
     case 'file':
       return undefined;
-    default:
-      setValue(f.el as HTMLInputElement | HTMLTextAreaElement, value);
+    default: {
+      const el = f.el as HTMLInputElement | HTMLTextAreaElement;
+      setValue(el, value);
+      // Some sites ignore a pasted value and only accept typing: type it instead.
+      if (canon(el.value) !== canon(value)) await typeText(el, value);
       return undefined;
+    }
   }
 }
 
@@ -249,26 +257,38 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
   // 4. Self-check: fresh scan, compare, correct once, then report.
   const reports: FieldReport[] = [];
   const marks: Mark[] = [];
-  const record = (f: FieldHandle, status: FieldReport['status'], detail: string, value?: string) => {
-    reports.push({ label: short(f.label), status, detail, value });
-    if (status !== 'skipped') marks.push({ anchor: f.anchor, watch: f.el, status, message: status === 'filled' ? detail : `${status === 'review' ? 'Review' : 'Needs you'}: ${detail}` });
+  const record = (p: Plan, status: FieldReport['status'], detail: string, value?: string) => {
+    const { f } = p;
+    const label = short(f.label);
+    reports.push({ label, status, detail, value });
+    if (status === 'skipped') return;
+    const canDraft = (f.kind === 'textarea' || f.kind === 'text') && ((!isResolved(p.res) && p.res.openEnded) || (isResolved(p.res) && p.res.confidence === 'review' && isOpenEnded(toDescriptor(f))));
+    marks.push({
+      anchor: f.anchor,
+      watch: f.el,
+      status,
+      label,
+      message: status === 'filled' ? detail : `${status === 'review' ? 'Review' : 'Needs you'}: ${detail}`,
+      resolved: () => read(p) !== '',
+      draft: canDraft ? () => draftInto(f) : undefined,
+    });
   };
 
   for (const p of plan(collectFields(doc, adapter), payload)) {
     const { f, res } = p;
     try {
       if (p.skip) {
-        record(f, 'skipped', p.skip);
+        record(p, 'skipped', p.skip);
         continue;
       }
 
       if (f.kind === 'file') {
         const has = (f.el as HTMLInputElement).files?.length;
         if (p.key === 'resume') {
-          if (has) record(f, 'filled', `Attached ${(f.el as HTMLInputElement).files![0].name}`);
-          else record(f, 'missing', resume ? 'Could not attach your resume. Upload it yourself.' : 'No resume saved in Job Helper. Upload it yourself.');
+          if (has) record(p, 'filled', `Attached ${(f.el as HTMLInputElement).files![0].name}`);
+          else record(p, 'missing', resume ? 'Could not attach your resume. Upload it yourself.' : 'No resume saved in Job Helper. Upload it yourself.');
         } else if (!has && (f.required || p.key === 'coverLetter')) {
-          record(f, 'missing', isResolved(res) ? 'Upload a file' : res.reason);
+          record(p, 'missing', isResolved(res) ? 'Upload a file' : res.reason);
         }
         continue;
       }
@@ -277,12 +297,12 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
         if (read(p) && f.kind !== 'checkbox') {
           // Something (you or the site) filled it and we have nothing to compare with.
           if (!res.openEnded) continue;
-          record(f, 'review', 'Filled by the site. Check it, or write your own answer.');
+          record(p, 'review', 'Filled by the site. Check it, or write your own answer.');
           continue;
         }
         if (f.kind === 'checkbox' && !f.required) continue;
         const optional = !f.required && !res.openEnded && !res.key;
-        record(f, optional ? 'review' : 'missing', optional ? `Optional: ${res.reason.toLowerCase()}` : res.reason);
+        record(p, optional ? 'review' : 'missing', optional ? `Optional: ${res.reason.toLowerCase()}` : res.reason);
         continue;
       }
 
@@ -299,24 +319,24 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
         score = after;
         if (!score) {
           const why = err ?? failed.get(f.el);
-          record(f, 'missing', why ?? (current ? `Shows "${current}" but should be "${res.value}". Fix it yourself.` : `Couldn't set "${res.value}". Fill it yourself.`));
+          record(p, 'missing', why ?? (current ? `Shows "${current}" but should be "${res.value}". Fix it yourself.` : `Couldn't set "${res.value}". Fill it yourself.`));
           continue;
         }
       }
 
       const old = replaced.get(f.el);
       if (res.confidence === 'review' || f.review) {
-        record(f, 'review', res.confidence === 'review' ? (res.reason ?? 'Check this answer') : f.review!, current);
+        record(p, 'review', res.confidence === 'review' ? (res.reason ?? 'Check this answer') : f.review!, current);
       } else if (score < WEAK_OPTION) {
-        record(f, 'review', `Closest option chosen for "${res.value}". Check it.`, current);
+        record(p, 'review', `Closest option chosen for "${res.value}". Check it.`, current);
       } else if (old && canon(old) !== canon(current)) {
-        record(f, 'review', `Replaced "${old.slice(0, 40)}" (filled by the site or earlier) with your profile value`, current);
+        record(p, 'review', `Replaced "${old.slice(0, 40)}" (filled by the site or earlier) with your profile value`, current);
       } else {
-        record(f, 'filled', corrected ? `${res.source} (corrected after the site changed it)` : res.source, current);
+        record(p, 'filled', corrected ? `${res.source} (corrected after the site changed it)` : res.source, current);
       }
     } catch (err) {
       console.warn('[Job Helper] self-check failed on field', f, err);
-      record(f, 'missing', 'Could not check this field. Review it yourself.');
+      record(p, 'missing', 'Could not check this field. Review it yourself.');
     }
   }
 
@@ -327,4 +347,33 @@ export async function fillDocument(doc: Document, adapter: Adapter, payload: Fil
 
   if (marks.length) overlay.show(marks);
   return { url: location.href, adapter: adapter.name, fields: reports };
+}
+
+/** Asks the service worker for an AI draft and puts it in the field. Returns an error message on failure. */
+async function draftInto(f: FieldHandle): Promise<string | undefined> {
+  const el = f.el as HTMLInputElement | HTMLTextAreaElement;
+  const req: DraftRequest = {
+    type: 'jh:draft',
+    question: f.label,
+    maxLength: el.maxLength > 0 ? el.maxLength : undefined,
+    jobText: jobPageText(),
+    pageTitle: document.title,
+    pageUrl: location.href,
+  };
+  let res: DraftResponse | undefined;
+  try {
+    res = (await chrome.runtime.sendMessage(req)) as DraftResponse | undefined;
+  } catch (err) {
+    return `Couldn't reach Job Helper (${String(err)}). Reload the page and try again.`;
+  }
+  if (!res) return 'No response. Reload the page and try again.';
+  if (!res.ok) return res.error;
+  writing++;
+  try {
+    setValue(el, res.text);
+    if (canon(el.value) !== canon(res.text)) await typeText(el, res.text);
+  } finally {
+    writing--;
+  }
+  return undefined;
 }
