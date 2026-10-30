@@ -271,3 +271,26 @@ export function readValue(
   }
   return (el as HTMLInputElement).value?.trim() ?? '';
 }
+
+/**
+ * Types a value the way a person would: real insertText input events, one
+ * chunk at a time. Used when a site ignores a value set programmatically.
+ */
+export async function typeText(el: HTMLInputElement | HTMLTextAreaElement, value: string): Promise<void> {
+  el.focus({ preventScroll: true });
+  el.select?.();
+  const ok = document.execCommand?.('insertText', false, value);
+  if (!ok || el.value !== value) {
+    const set = nativeSetter(el);
+    (set ?? ((v: string) => (el.value = v)))('');
+    for (const ch of value) {
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true, composed: true }));
+      (set ?? ((v: string) => (el.value = v)))(el.value + ch);
+      el.dispatchEvent(new InputEvent('input', { data: ch, inputType: 'insertText', bubbles: true, composed: true }));
+      el.dispatchEvent(new KeyboardEvent('keyup', { key: ch, bubbles: true, composed: true }));
+      if (value.length < 200) await sleep(5);
+    }
+  }
+  fire(el, 'change');
+  el.dispatchEvent(new FocusEvent('focusout', { bubbles: true, composed: true }));
+}

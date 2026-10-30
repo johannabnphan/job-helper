@@ -32,6 +32,7 @@ async function fillCurrentPage(): Promise<void> {
     b.textContent = 'Filling…';
   });
   try {
+    liveFlags.clear();
     lastResult = { url: t.url ?? '', result: await fillTab(t) };
     const { filled, review, missing } = lastResult.result.counts;
     if (!filled && !review && !missing) toast('No application form found on this page.', 'error');
@@ -64,32 +65,66 @@ async function pageCard(): Promise<HTMLElement> {
       'div',
       { class: 'row' },
       fillBtn,
-      result ? h('button', { onclick: async () => { const t = await activeTab(); if (t?.id) await clearHighlights(t.id); lastResult = undefined; await render(); } }, 'Clear highlights') : null,
+      result ? h('button', { onclick: async () => { const t = await activeTab(); if (t?.id) await clearHighlights(t.id); lastResult = undefined; liveFlags.clear(); await render(); } }, 'Clear highlights') : null,
     ),
     result ? resultView(result) : h('p', { class: 'muted small', style: 'margin:0' }, 'Fills the form from your profile and answer bank, then highlights what to check. You click Submit yourself.'),
   );
 }
 
+interface Flag {
+  label: string;
+  status: string;
+  detail: string;
+}
+
+/** Open flags per frame, reported live by the page as you fix fields. */
+const liveFlags = new Map<string, Flag[]>();
+
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type !== 'jh:flags') return;
+  void activeTab().then((t) => {
+    if (!t || sender.tab?.id !== t.id) return;
+    liveFlags.set(String(msg.frameUrl), msg.flags as Flag[]);
+    void render();
+  });
+});
+
+async function jumpTo(label: string): Promise<void> {
+  const t = await activeTab();
+  if (!t?.id) return;
+  await chrome.scripting.executeScript({ target: { tabId: t.id, allFrames: true }, func: (l: string) => window.__jobHelper?.focus(l), args: [label] });
+}
+
 function resultView(r: TabFillResult): HTMLElement {
-  const flagged = r.reports.flatMap((rep) => rep.fields.filter((f) => f.status === 'review' || f.status === 'missing'));
+  const flagged: Flag[] = liveFlags.size
+    ? [...liveFlags.values()].flat()
+    : r.reports.flatMap((rep) => rep.fields.filter((f) => f.status === 'review' || f.status === 'missing'));
+  const fixed = r.counts.review + r.counts.missing - flagged.length;
   return h(
     'div',
     { class: 'stack', style: 'gap:8px' },
     h(
       'div',
       { class: 'counts' },
-      h('span', { class: 'count filled' }, `${r.counts.filled} filled`),
-      h('span', { class: 'count review' }, `${r.counts.review} to review`),
-      h('span', { class: 'count missing' }, `${r.counts.missing} need you`),
+      h('span', { class: 'count filled' }, `${r.counts.filled + Math.max(0, fixed)} done`),
+      h('span', { class: 'count review' }, `${flagged.filter((f) => f.status === 'review').length} to review`),
+      h('span', { class: 'count missing' }, `${flagged.filter((f) => f.status === 'missing').length} need you`),
     ),
     flagged.length
       ? h(
           'ul',
           { class: 'flags' },
-          flagged.map((f) => h('li', { class: f.status }, h('strong', {}, f.label), h('div', { class: 'muted small' }, f.detail))),
+          flagged.map((f) =>
+            h(
+              'li',
+              { class: `${f.status} clickable`, title: 'Show this field', onclick: () => jumpTo(f.label) },
+              h('strong', {}, f.label),
+              h('div', { class: 'muted small' }, f.detail),
+            ),
+          ),
         )
-      : null,
-    h('p', { class: 'muted small', style: 'margin:0' }, 'Review everything on the page before you submit.'),
+      : h('p', { class: 'small', style: 'margin:0;font-weight:600' }, 'Everything is checked ✓ Submit it on the page when you\'re ready.'),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'Click an item to jump to it. Items disappear as you fix them.'),
   );
 }
 
@@ -226,7 +261,10 @@ onStorageChange(['jobs', 'profile', 'buddy'], () => {
   void render();
 });
 void celebrate();
-chrome.tabs.onActivated.addListener(() => void render());
+chrome.tabs.onActivated.addListener(() => {
+  liveFlags.clear();
+  void render();
+});
 chrome.tabs.onUpdated.addListener((_id, info) => {
   if (info.status === 'complete' || info.title) void render();
 });

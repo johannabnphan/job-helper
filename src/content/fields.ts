@@ -248,6 +248,7 @@ export function toDescriptor(f: FieldHandle): FieldDescriptor {
     label: f.label,
     kind: f.kind,
     attrs: f.attrs,
+    placeholder: f.el.getAttribute('placeholder') ?? undefined,
     autocomplete: f.autocomplete,
     options: f.options,
     hint: f.hint,

@@ -51,3 +51,5 @@ button.icon { font-size: 12px; padding: 3px 8px; }
   padding: 8px 14px; border-radius: 999px; z-index: 20; animation: pop 2.4s ease forwards; }
 @keyframes pop { 0% { opacity: 0; transform: translate(-50%, -8px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1.05); } 20% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .xp-pop { animation: none; } .xpbar > div { transition: none; } }
+.flags li.clickable { cursor: pointer; }
+.flags li.clickable:hover { outline: 1px solid var(--accent); }

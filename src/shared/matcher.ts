@@ -92,6 +92,8 @@ export interface FieldDescriptor {
   kind: FieldKind;
   /** name / id / data-automation-id etc. Used when the label doesn't match. */
   attrs?: string;
+  /** The input's own placeholder text. */
+  placeholder?: string;
   /** HTML autocomplete attribute, a strong signal when present. */
   autocomplete?: string;
   /** Option labels for select / radio / combobox fields. */
@@ -282,7 +284,14 @@ export function matchProfileKey(field: FieldDescriptor, section?: 'work' | 'educ
   // Long free-text questions only match a few rules reliably; avoid "name" in
   // "Why do you want to join <company name>?" being taken as a name field.
   const label = field.label.length > 120 ? '' : field.label;
-  return tryText(label) ?? (field.attrs ? tryText(humanize(field.attrs)) : undefined);
+  const fromLabel = tryText(label);
+  // A "Name" heading above separate First / Last boxes: the box's own
+  // placeholder or name/id says which half it is.
+  if (!fromLabel || fromLabel === 'fullName') {
+    const own = (field.placeholder ? tryText(field.placeholder) : undefined) ?? (field.attrs ? tryText(humanize(field.attrs)) : undefined);
+    if (own === 'firstName' || own === 'lastName' || own === 'middleName' || (!fromLabel && own)) return own;
+  }
+  return fromLabel;
 }
 
 // ---------------------------------------------------------------------------

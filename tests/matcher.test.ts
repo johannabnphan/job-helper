@@ -214,3 +214,12 @@ describe('profile value that fits no option', () => {
     expect(isResolved(r) && r.variants).toContain('Sponsorship not required');
   });
 });
+
+describe('split name boxes under one "Name" label', () => {
+  it('uses the placeholder or name attribute', () => {
+    expect(matchProfileKey(f('Name', 'text', { placeholder: 'First' }))).toBe('firstName');
+    expect(matchProfileKey(f('Name *', 'text', { placeholder: 'Last name' }))).toBe('lastName');
+    expect(matchProfileKey(f('Full name', 'text', { attrs: 'applicant_last_name' }))).toBe('lastName');
+    expect(matchProfileKey(f('Name', 'text'))).toBe('fullName');
+  });
+});

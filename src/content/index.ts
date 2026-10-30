@@ -9,6 +9,8 @@ import { overlay } from './overlay';
 interface JobHelperApi {
   fill(payload: FillPayload): Promise<FillReport>;
   clear(): void;
+  /** Scrolls to a flagged field by its label (from the side panel list). */
+  focus(label: string): boolean;
 }
 
 declare global {
@@ -29,6 +31,9 @@ if (!window.__jobHelper) {
     },
     clear() {
       overlay.clear();
+    },
+    focus(label) {
+      return overlay.focusLabel(label);
     },
   };
 }
